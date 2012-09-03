@@ -4,6 +4,7 @@
 #include <string>
 #include <direct.h>
 #include <Windows.h>
+#include <stdio.h>
 
 using namespace std;
 
@@ -35,6 +36,7 @@ void main(int argc, char *argv[])
 
 	//initialize vars
 	dir = getCurrentDir();
+
 	extension = "*";
 	prefix.clear();
 	suffix.clear();
@@ -353,10 +355,9 @@ bool stringEquals(string original, string compare)
 
 string getCurrentDir() 
 {
-	char buffer[MAX_PATH];
-	GetModuleFileName( NULL, buffer, MAX_PATH );
-	string::size_type pos = string( buffer ).find_last_of( "\\/" );
-	return string( buffer ).substr( 0, pos);
+	char cCurrentPath[FILENAME_MAX];
+	_getcwd(cCurrentPath, sizeof(cCurrentPath));
+	return cCurrentPath;
 }
 
 void badSyntax()
