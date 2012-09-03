@@ -8,11 +8,11 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.1";
+const static string VERSIONNUM = "1.2";
 
 //global vars
 string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit;
-bool repeatReplace;
+bool repeatAction, hasParam;
 
 //functions
 char checkParam(int, char *);
@@ -47,7 +47,8 @@ void main(int argc, char *argv[])
 	insertHere.clear();
 	insertThis.clear();
 	singleFileEdit.clear();
-	repeatReplace = false;
+	repeatAction = false;
+	hasParam = true;
 
 	//check all params entered and set vars
 	if (argc == 1)
@@ -61,7 +62,8 @@ void main(int argc, char *argv[])
 			if (argv[count][0] == '/')
 			{
 				storeParam(count, checkParam(count, argv[count]), argc, argv);
-				count++;
+				if (hasParam)
+					count++;
 			}
 			else
 				badSyntax();
@@ -96,7 +98,7 @@ void main(int argc, char *argv[])
 			{
 				if (stringEquals(extension, extensions[i]))
 				{
-					if (repeatReplace)
+					if (repeatAction)
 					{
 						while (renamed[i].find(replaceOriginal) != string::npos)
 						{
@@ -122,7 +124,7 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (repeatReplace)
+				if (repeatAction)
 				{
 					while (renamed[i].find(replaceOriginal) != string::npos)
 					{
@@ -155,11 +157,26 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]) && renamed[i].find(removeThis) != string::npos)
+				if (stringEquals(extension, extensions[i]))
 				{
-					renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
-					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
-					system(command.c_str());
+					if (repeatAction)
+					{
+						while (renamed[i].find(removeThis) != string::npos)
+						{
+							renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
+							command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+							system(command.c_str());
+						}
+					}
+					else
+					{
+						if (renamed[i].find(removeThis) != string::npos)
+						{
+							renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
+							command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+							system(command.c_str());
+						}
+					}
 				}
 			}
 		}
@@ -167,11 +184,23 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (renamed[i].find(removeThis) != string::npos)
+				if (repeatAction)
 				{
-					renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
-					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
-					system(command.c_str());
+					while (renamed[i].find(removeThis) != string::npos)
+					{
+						renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
+						command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+						system(command.c_str());
+					}
+				}
+				else
+				{
+					if (renamed[i].find(removeThis) != string::npos)
+					{
+						renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
+						command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+						system(command.c_str());
+					}
 				}
 			}
 		}
@@ -345,18 +374,29 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		if (argc > 2)
 			badSyntax();
 		else
+		{
 			help();
+			hasParam = true;
+		}
 		break;
 	case 'i':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else
+		{
 			insertHere = argv[pos+1];
+			hasParam = true;
+		}
+		break;
 	case 'I':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else
+		{
 			insertThis = argv[pos+1];
+			hasParam = true;
+		}
+		break;
 	case 'd':
 		if (nextIsParamOrBlank(pos, argc, argv))
 			break;
@@ -365,6 +405,7 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			dir = argv[pos+1];
 			while (dir.find("\\") != string::npos)
 				dir.replace(dir.find("\\"),1,"/");
+			hasParam = true;
 		}
 		break;
 	case 'f':
@@ -374,52 +415,75 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		{
 			extension = ".";
 			extension = extension + argv[pos+1];
+			hasParam = true;
 		}
 		break;
 	case 'F':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else
+		{
 			singleFileEdit = argv[pos+1];
+			hasParam = true;
+		}
 		break;
 	case 'o':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else
+		{
 			replaceOriginal = argv[pos+1];
+			hasParam = true;
+		}
 		break;
 	case 'n':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else
+		{
 			replaceNew = argv[pos+1];
+			hasParam = true;
+		}
 		break;
 	case 'p':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else
+		{
 			prefix = argv[pos+1];
+			hasParam = true;
+		}
 		break;
 	case 'r':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else
+		{
 			removeThis = argv[pos+1];
+			hasParam = true;
+		}
 		break;
 	case 'R':
-		repeatReplace = true;
+		repeatAction = true;
+		hasParam = false;
 		break;
 	case 's':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else
+		{
 			suffix = argv[pos+1];
+			hasParam = true;
+		}
 		break;
 	case 'v':
 		if (argc > 2)
 			badSyntax();
 		else
+		{
 			showVersion();
+			hasParam = true;
+		}
 		break;
 	default:
 		badSyntax();
@@ -492,7 +556,7 @@ void help()
 		<< "\t/n\tNew string to replace original\n\n"
 		<< "\t/p\tAdd prefix to file names\n\n"
 		<< "\t/r\tString to remove\n\n"
-		<< "\t/R\tDo replacements repeatedly\n\n"
+		<< "\t/R\tRepeat action through whole file\n\n"
 		<< "\t/s\tAdd suffix to file names\n\n"
 		<< "\t/v\tDisplays Batch Rename Version Number\n"
 		;
