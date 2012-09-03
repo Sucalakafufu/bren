@@ -53,7 +53,7 @@ void main(int argc, char *argv[])
 	{
 		for (int count=1;count<argc;count++)
 		{
-			if (argv[count][0] == '-')
+			if (argv[count][0] == '/')
 			{
 				storeParam(count, checkParam(count, argv[count]), argc, argv);
 				count++;
@@ -326,7 +326,7 @@ bool nextIsParamOrBlank(int pos, int argc, char *argv[])
 {
 	if (pos+1 >= argc)
 		return true;
-	else if (argv[pos+1][0] == '-')
+	else if (argv[pos+1][0] == '/')
 		return true;
 	else
 		return false;
@@ -363,7 +363,7 @@ string getCurrentDir()
 void badSyntax()
 {
 	cout << "\nIncorrect Syntax\n"
-		<< "Please try bren -h\n";
+		<< "Please try bren /h\n";
 	exit(1);
 }
 
@@ -378,15 +378,15 @@ void help()
 	cout << "\nBatch Rename\n" 
 		<< "Usage: bren [options]\n\n"
 		<< "Options\n"
-		<< "\t-h\tBrings up this help dialog\n\n"
-		<< "\t-d\tDirectory to rename (defaults to current directory)\n\n"		
-		<< "\t-f\tFile extension (defaults to *)\n\n"
-		<< "\t-o\tOriginal string to be replaced\n\n"
-		<< "\t-n\tNew string to replace original\n\n"
-		<< "\t-p\tAdd prefix to file names\n\n"
-		<< "\t-r\tString to remove\n\n"
-		<< "\t-s\tAdd suffix to file names\n\n"
-		<< "\t-v\tDisplays Batch Rename Version Number\n"
+		<< "\t/h\tBrings up this help dialog\n\n"
+		<< "\t/d\tDirectory to rename (defaults to current directory)\n\n"		
+		<< "\t/f\tFile extension (defaults to *)\n\n"
+		<< "\t/o\tOriginal string to be replaced\n\n"
+		<< "\t/n\tNew string to replace original\n\n"
+		<< "\t/p\tAdd prefix to file names\n\n"
+		<< "\t/r\tString to remove\n\n"
+		<< "\t/s\tAdd suffix to file names\n\n"
+		<< "\t/v\tDisplays Batch Rename Version Number\n"
 		;
 	exit(0);
 }
