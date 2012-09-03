@@ -8,10 +8,11 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.0";
+const static string VERSIONNUM = "1.1";
 
 //global vars
-string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew;
+string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit;
+bool repeatReplace;
 
 //functions
 char checkParam(int, char *);
@@ -43,6 +44,10 @@ void main(int argc, char *argv[])
 	removeThis.clear();
 	replaceOriginal.clear();
 	replaceNew.clear();
+	insertHere.clear();
+	insertThis.clear();
+	singleFileEdit.clear();
+	repeatReplace = false;
 
 	//check all params entered and set vars
 	if (argc == 1)
@@ -67,24 +72,49 @@ void main(int argc, char *argv[])
 	_chdir(dir.c_str());
 
 	//get files
-	getFiles(files);
-	findExtensions(files,extensions);
-	renamed = files;
+	if (singleFileEdit.empty())
+	{
+		getFiles(files);
+		findExtensions(files,extensions);
+		renamed = files;
+	}
+	else
+	{
+		files.push_back(singleFileEdit);
+		findExtensions(files,extensions);
+		renamed = files;
+	}
 
 	//replacing
 	if ((!replaceOriginal.empty() && replaceNew.empty()) || (replaceOriginal.empty() && !replaceNew.empty()))
 		badSyntax();
-	else
+	else if (!replaceOriginal.empty() && !replaceNew.empty())
 	{
 		if (extension != "*")
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]) && renamed[i].find(replaceOriginal) != string::npos)
+				if (stringEquals(extension, extensions[i]))
 				{
-					renamed[i].replace(renamed[i].find(replaceOriginal), replaceOriginal.length(), replaceNew);
-					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
-					system(command.c_str());
+					if (repeatReplace)
+					{
+						while (renamed[i].find(replaceOriginal) != string::npos)
+						{
+							renamed[i].replace(renamed[i].find(replaceOriginal), replaceOriginal.length(), replaceNew);
+							command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+							system(command.c_str());
+							files = renamed;
+						}
+					}
+					else
+					{
+						if (renamed[i].find(replaceOriginal) != string::npos)
+						{
+							renamed[i].replace(renamed[i].find(replaceOriginal), replaceOriginal.length(), replaceNew);
+							command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+							system(command.c_str());						
+						}
+					}
 				}
 			}
 		}
@@ -92,11 +122,24 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (renamed[i].find(replaceOriginal) != string::npos)
+				if (repeatReplace)
 				{
-					renamed[i].replace(renamed[i].find(replaceOriginal), replaceOriginal.length(), replaceNew);
-					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
-					system(command.c_str());
+					while (renamed[i].find(replaceOriginal) != string::npos)
+					{
+						renamed[i].replace(renamed[i].find(replaceOriginal), replaceOriginal.length(), replaceNew);
+						command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+						system(command.c_str());
+						files = renamed;
+					}
+				}
+				else
+				{
+					if (renamed[i].find(replaceOriginal) != string::npos)
+					{
+						renamed[i].replace(renamed[i].find(replaceOriginal), replaceOriginal.length(), replaceNew);
+						command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+						system(command.c_str());						
+					}
 				}
 			}
 		}
@@ -106,27 +149,63 @@ void main(int argc, char *argv[])
 	files = renamed;
 
 	//removing
-	if (extension != "*")
+	if (!removeThis.empty())
 	{
-		for (unsigned int i = 0; i < renamed.size(); i++)
+		if (extension != "*")
 		{
-			if (stringEquals(extension, extensions[i]) && renamed[i].find(removeThis) != string::npos)
+			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
-				command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
-				system(command.c_str());
+				if (stringEquals(extension, extensions[i]) && renamed[i].find(removeThis) != string::npos)
+				{
+					renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
+					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+					system(command.c_str());
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				if (renamed[i].find(removeThis) != string::npos)
+				{
+					renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
+					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+					system(command.c_str());
+				}
 			}
 		}
 	}
-	else
+
+	//reinitialize files vector to new names
+	files = renamed;
+
+	//inserting
+	if ((!insertHere.empty() && insertThis.empty()) || (insertHere.empty() && !insertThis.empty()))
+		badSyntax();
+	else if (!insertHere.empty() && !insertThis.empty())
 	{
-		for (unsigned int i = 0; i < renamed.size(); i++)
+		if (extension != "*")
 		{
-			if (renamed[i].find(removeThis) != string::npos)
+			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
+				if (stringEquals(extension, extensions[i]))
+				{					
+					renamed[i].insert(renamed[i].begin()+atoi(insertHere.c_str()),insertThis.begin(),insertThis.end());
+					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+					system(command.c_str());
+					files = renamed;
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				renamed[i].insert(renamed[i].begin()+atoi(insertHere.c_str()),insertThis.begin(),insertThis.end());
 				command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
 				system(command.c_str());
+				files = renamed;
 			}
 		}
 	}
@@ -135,25 +214,28 @@ void main(int argc, char *argv[])
 	files = renamed;
 
 	//prefix
-	if (extension != "*")
+	if (!prefix.empty())
 	{
-		for (unsigned int i = 0; i < renamed.size(); i++)
+		if (extension != "*")
 		{
-			if (stringEquals(extension, extensions[i]))
+			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
+				if (stringEquals(extension, extensions[i]))
+				{
+					renamed[i] = prefix + renamed[i];
+					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+					system(command.c_str());
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{			
 				renamed[i] = prefix + renamed[i];
 				command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
 				system(command.c_str());
 			}
-		}
-	}
-	else
-	{
-		for (unsigned int i = 0; i < renamed.size(); i++)
-		{			
-			renamed[i] = prefix + renamed[i];
-			command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
-			system(command.c_str());
 		}
 	}
 
@@ -161,12 +243,33 @@ void main(int argc, char *argv[])
 	files = renamed;
 
 	//suffix
-	unsigned int count;
-	if (extension != "*")
+	if (!suffix.empty())
 	{
-		for (unsigned int i = 0; i < renamed.size(); i++)
+		unsigned int count;
+		if (extension != "*")
 		{
-			if (stringEquals(extension, extensions[i]))
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				if (stringEquals(extension, extensions[i]))
+				{			
+					count = 1;
+					while (count<renamed[i].length()&&*(renamed[i].end()-count)!='.')
+						count++;
+
+					if (count == renamed[i].length())
+						renamed[i] = renamed[i] + suffix;
+					else
+					{
+						renamed[i].insert(renamed[i].end()-count,suffix.begin(),suffix.end());
+					}
+					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+					system(command.c_str());
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < files.size(); i++)
 			{			
 				count = 1;
 				while (count<renamed[i].length()&&*(renamed[i].end()-count)!='.')
@@ -181,24 +284,6 @@ void main(int argc, char *argv[])
 				command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
 				system(command.c_str());
 			}
-		}
-	}
-	else
-	{
-		for (unsigned int i = 0; i < files.size(); i++)
-		{			
-			count = 1;
-			while (count<renamed[i].length()&&*(renamed[i].end()-count)!='.')
-				count++;
-
-			if (count == renamed[i].length())
-				renamed[i] = renamed[i] + suffix;
-			else
-			{
-				renamed[i].insert(renamed[i].end()-count,suffix.begin(),suffix.end());
-			}
-			command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
-			system(command.c_str());
 		}
 	}
 }
@@ -262,6 +347,16 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		else
 			help();
 		break;
+	case 'i':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else
+			insertHere = argv[pos+1];
+	case 'I':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else
+			insertThis = argv[pos+1];
 	case 'd':
 		if (nextIsParamOrBlank(pos, argc, argv))
 			break;
@@ -280,6 +375,12 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			extension = ".";
 			extension = extension + argv[pos+1];
 		}
+		break;
+	case 'F':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else
+			singleFileEdit = argv[pos+1];
 		break;
 	case 'o':
 		if (nextIsParamOrBlank(pos,argc,argv))
@@ -304,6 +405,9 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			break;
 		else
 			removeThis = argv[pos+1];
+		break;
+	case 'R':
+		repeatReplace = true;
 		break;
 	case 's':
 		if (nextIsParamOrBlank(pos,argc,argv))
@@ -379,12 +483,16 @@ void help()
 		<< "Usage: bren [options]\n\n"
 		<< "Options\n"
 		<< "\t/h\tBrings up this help dialog\n\n"
+		<< "\t/i\tInsert location\n\n"
+		<< "\t/I\tInsert value\n\n"
 		<< "\t/d\tDirectory to rename (defaults to current directory)\n\n"		
 		<< "\t/f\tFile extension (defaults to *)\n\n"
+		<< "\t/F\tRename only this file\n\n"
 		<< "\t/o\tOriginal string to be replaced\n\n"
 		<< "\t/n\tNew string to replace original\n\n"
 		<< "\t/p\tAdd prefix to file names\n\n"
 		<< "\t/r\tString to remove\n\n"
+		<< "\t/R\tDo replacements repeatedly\n\n"
 		<< "\t/s\tAdd suffix to file names\n\n"
 		<< "\t/v\tDisplays Batch Rename Version Number\n"
 		;
