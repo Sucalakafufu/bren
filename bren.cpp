@@ -8,11 +8,11 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.3";
+const static string VERSIONNUM = "1.4";
 
 //global vars
 string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
-	addExtension;
+	addExtension, startDelete, endDelete;
 bool repeatAction, hasParam, insertI;
 
 //functions
@@ -20,6 +20,7 @@ char checkParam(int, char *);
 void storeParam(int, char, int, char*[]);
 bool nextIsParamOrBlank(int, int, char *[]);
 bool stringEquals(string, string);
+bool isPosNum(string);
 void getFiles(vector<string>&);
 void findExtensions(vector<string>, vector<string>&);
 void showVersion();
@@ -51,6 +52,8 @@ void main(int argc, char *argv[])
 	singleFileEdit.clear();
 	searchThis.clear();
 	addExtension.clear();
+	startDelete.clear();
+	endDelete.clear();
 	searchNumber = "1";
 	repeatAction = false;
 	hasParam = true;
@@ -70,7 +73,7 @@ void main(int argc, char *argv[])
 				storeParam(count, checkParam(count, argv[count]), argc, argv);
 				if (hasParam)
 				{				
-					if (argv[count][1] == 'S' || argv[count][1] == 'i' || argv[count][1] == 'I' || argv[count][1] == 'n')
+					if (argv[count][1] == 'S' || argv[count][1] == 'i' || argv[count][1] == 'I' || argv[count][1] == 'n' || argv[count][1] == 'D')
 					{
 						if (!nextIsParamOrBlank(count,argc,argv) &&!nextIsParamOrBlank(count+1,argc,argv))
 						count++;
@@ -219,6 +222,46 @@ void main(int argc, char *argv[])
 						system(command.c_str());
 					}
 				}
+			}
+		}
+	}
+#pragma endregion
+
+	//reinitialize files vector to new names
+	files = renamed;
+
+#pragma region removing section
+	//removing section
+		
+	if ((!startDelete.empty() && endDelete.empty()) || (startDelete.empty() && !endDelete.empty()))
+		badSyntax();
+	else if (!startDelete.empty() && !endDelete.empty())
+	{
+		if (extension != "*")
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				if (stringEquals(extension, extensions[i]))
+				{					
+					if (startDelete == endDelete)
+						renamed[i].erase(renamed[i].begin()+atoi(startDelete.c_str())-1);
+					else
+						renamed[i].erase(renamed[i].begin()+atoi(startDelete.c_str())-1,renamed[i].begin()+atoi(endDelete.c_str()));
+					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+					system(command.c_str());						
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				if (startDelete == endDelete)
+					renamed[i].erase(renamed[i].begin()+atoi(startDelete.c_str())-1);
+				else
+					renamed[i].erase(renamed[i].begin()+atoi(startDelete.c_str())-1,renamed[i].begin()+atoi(endDelete.c_str()));
+				command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+				system(command.c_str());
 			}
 		}
 	}
@@ -520,13 +563,8 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		else if (!nextIsParamOrBlank(pos+1,argc,argv))
 		{
 			insertHere = argv[pos+2];
-			for (unsigned int i = 0; i < insertHere.size(); i++)
-			{
-				if (!isdigit(insertHere[i]))
-					badSyntax();
-			}
-			if (atoi(insertHere.c_str()) < 1)
-				badSyntax();
+			if (!isPosNum(insertHere))
+				badSyntax();			
 		}
 
 		insertThis = argv[pos+1];
@@ -553,6 +591,26 @@ void storeParam(int pos, char option, int argc, char *argv[])
 				dir.replace(dir.find("\\"),1,"/");
 			hasParam = true;
 		}
+		break;
+	case 'D':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;		
+		else if (!nextIsParamOrBlank(pos+1,argc,argv))
+		{
+			endDelete = argv[pos+2];
+
+			if (!isPosNum(endDelete))
+				badSyntax();
+		}
+
+		startDelete = argv[pos+1];
+		if (!isPosNum(startDelete))
+			badSyntax();		
+
+		if (atoi(endDelete.c_str()) < atoi(startDelete.c_str()))
+			badSyntax();
+
+		hasParam = true;
 		break;
 	case 'e':
 		if (nextIsParamOrBlank(pos, argc, argv))
@@ -628,15 +686,11 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		else if (!nextIsParamOrBlank(pos+1,argc,argv))
 		{
 			searchNumber = argv[pos+2];
-			for (unsigned int i = 0; i < searchNumber.size(); i++)
-			{
-				if (!isdigit(searchNumber[i]))
-					badSyntax();
-			}
-			if (atoi(searchNumber.c_str()) < 1)
-				badSyntax();
+			if (!isPosNum(searchNumber))
+				badSyntax();			
 		}
 		searchThis = argv[pos+1];
+		hasParam = true;
 		break;
 	case 'v':
 		if (argc > 2)
@@ -683,6 +737,19 @@ bool stringEquals(string original, string compare)
 		return false;
 }
 
+bool isPosNum(string check)
+{
+	for (unsigned int i = 0; i < check.size(); i++)
+	{
+		if (!isdigit(check[i]))
+			return false;
+	}
+	if (atoi(check.c_str()) < 1)
+		return false;
+
+	return true;
+}
+
 string getCurrentDir() 
 {
 	char cCurrentPath[FILENAME_MAX];
@@ -708,13 +775,14 @@ void help()
 	cout << "\nBatch Rename\n" 
 		<< "Usage: bren [options]\n\n"
 		<< "Options\n\n"
-		<< " /h\t\t\t\tBrings up this help dialog\n\n"
-		<< " /i <value> <location>\t\tInsert at location\n\n"
-		<< " /I <value> <string>\t\tInsert at string location\n\n"
+		<< " /h\t\t\t\tBrings up this help dialog\n\n"		
 		<< " /d\t\t\t\tDirectory to rename \n\t\t\t\t(defaults to current directory)\n\n"	
+		<< " /D <start> <end>\t\tDelete section between start and end locations\n\n"
 		<< " /e <extension name>\t\tAdd extension\n\n"
 		<< " /f\t\t\t\tFile extension (defaults to *)\n\n"
 		<< " /F <filename>\t\t\tRename only this file\n\n"
+		<< " /i <value> <location>\t\tInsert at location\n\n"
+		<< " /I <value> <string>\t\tInsert at string location\n\n"
 		<< " /n <string> <value>\t\tReplace string with value\n\n"
 		<< " /p\t\t\t\tAdd prefix to file names\n\n"
 		<< " /r\t\t\t\tRemove string from file names\n\n"
