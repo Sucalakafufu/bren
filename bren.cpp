@@ -8,11 +8,12 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.2";
+const static string VERSIONNUM = "1.3";
 
 //global vars
-string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit;
-bool repeatAction, hasParam;
+string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
+	addExtension;
+bool repeatAction, hasParam, insertI;
 
 //functions
 char checkParam(int, char *);
@@ -32,6 +33,7 @@ void main(int argc, char *argv[])
 	vector<string> extensions;
 	vector<string> files;
 	vector<string> renamed;
+	string::size_type position;
 
 	string command;
 
@@ -47,8 +49,12 @@ void main(int argc, char *argv[])
 	insertHere.clear();
 	insertThis.clear();
 	singleFileEdit.clear();
+	searchThis.clear();
+	addExtension.clear();
+	searchNumber = "1";
 	repeatAction = false;
 	hasParam = true;
+	insertI = false;
 
 	//check all params entered and set vars
 	if (argc == 1)
@@ -63,7 +69,14 @@ void main(int argc, char *argv[])
 			{
 				storeParam(count, checkParam(count, argv[count]), argc, argv);
 				if (hasParam)
+				{				
+					if (argv[count][1] == 'S' || argv[count][1] == 'i' || argv[count][1] == 'I' || argv[count][1] == 'n')
+					{
+						if (!nextIsParamOrBlank(count,argc,argv) &&!nextIsParamOrBlank(count+1,argc,argv))
+						count++;
+					}
 					count++;
+				}
 			}
 			else
 				badSyntax();
@@ -87,6 +100,7 @@ void main(int argc, char *argv[])
 		renamed = files;
 	}
 
+#pragma region replacing
 	//replacing
 	if ((!replaceOriginal.empty() && replaceNew.empty()) || (replaceOriginal.empty() && !replaceNew.empty()))
 		badSyntax();
@@ -146,10 +160,12 @@ void main(int argc, char *argv[])
 			}
 		}
 	}
+#pragma endregion
 
 	//reinitialize files vector to new names
 	files = renamed;
 
+#pragma region removing
 	//removing
 	if (!removeThis.empty())
 	{
@@ -166,6 +182,7 @@ void main(int argc, char *argv[])
 							renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
 							command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
 							system(command.c_str());
+							files = renamed;
 						}
 					}
 					else
@@ -205,10 +222,12 @@ void main(int argc, char *argv[])
 			}
 		}
 	}
+#pragma endregion
 
 	//reinitialize files vector to new names
 	files = renamed;
 
+#pragma region inserting
 	//inserting
 	if ((!insertHere.empty() && insertThis.empty()) || (insertHere.empty() && !insertThis.empty()))
 		badSyntax();
@@ -219,10 +238,23 @@ void main(int argc, char *argv[])
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
 				if (stringEquals(extension, extensions[i]))
-				{					
-					renamed[i].insert(renamed[i].begin()+atoi(insertHere.c_str()),insertThis.begin(),insertThis.end());
-					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
-					system(command.c_str());
+				{				
+					if (!insertI)
+					{
+						renamed[i].insert(renamed[i].begin()+atoi(insertHere.c_str())-1,insertThis.begin(),insertThis.end());
+						command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+						system(command.c_str());
+					}
+					else
+					{
+						position = renamed[i].find(insertHere);
+						if (position != string::npos)
+						{
+							renamed[i].insert(renamed[i].begin()+position,insertThis.begin(),insertThis.end());
+							command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+							system(command.c_str());
+						}
+					}					
 					files = renamed;
 				}
 			}
@@ -231,17 +263,31 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				renamed[i].insert(renamed[i].begin()+atoi(insertHere.c_str()),insertThis.begin(),insertThis.end());
-				command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
-				system(command.c_str());
+				if (!insertI)
+				{
+					renamed[i].insert(renamed[i].begin()+atoi(insertHere.c_str())-1,insertThis.begin(),insertThis.end());
+					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+					system(command.c_str());
+				}
+				else
+				{
+					position = renamed[i].find(insertHere);
+					if (position != string::npos)
+					{
+						renamed[i].insert(renamed[i].begin()+position,insertThis.begin(),insertThis.end());
+						command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+						system(command.c_str());
+					}
+				}
 				files = renamed;
 			}
 		}
 	}
-
+#pragma endregion
 	//reinitialize files vector to new names
 	files = renamed;
 
+#pragma region prefix
 	//prefix
 	if (!prefix.empty())
 	{
@@ -267,10 +313,12 @@ void main(int argc, char *argv[])
 			}
 		}
 	}
+#pragma endregion
 
 	//reinitialize files vector to new names
 	files = renamed;
 
+#pragma region suffix
 	//suffix
 	if (!suffix.empty())
 	{
@@ -315,6 +363,93 @@ void main(int argc, char *argv[])
 			}
 		}
 	}
+#pragma endregion
+	
+	//reinitialize files vector to new names
+	files = renamed;
+
+#pragma region add extension
+	//add extension
+	if (!addExtension.empty())
+	{
+		unsigned int count;
+		if (extension != "*")
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				if (stringEquals(extension, extensions[i]))
+				{			
+					renamed[i] = renamed[i] + addExtension;
+					command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+					system(command.c_str());
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < files.size(); i++)
+			{			
+				renamed[i] = renamed[i] + addExtension;
+				command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+				system(command.c_str());
+			}
+		}
+	}
+
+#pragma endregion
+
+	//reinitialize files vector to new names
+	files = renamed;
+
+#pragma region search
+	//search
+	if (!searchThis.empty())
+	{
+		if (repeatAction)
+			badSyntax();
+		else if (extension != "*")
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				if (stringEquals(extension, extensions[i]))
+				{				
+					position = renamed[i].find(searchThis);
+					if (atoi(searchNumber.c_str()) > 1)
+					{
+						for (int j = 1; j < atoi(searchNumber.c_str()); j++)
+							position = renamed[i].find(searchThis, position+1);
+					}
+					if (position != string::npos)
+						position++;
+
+					if (position == string::npos)
+						cout << "\nDid not find \"" + searchThis + "\" in " + renamed[i];
+					else
+						cout << "\nFound \"" + searchThis + "\" in " + renamed[i] + " at position: " << position;
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{				
+				position = renamed[i].find(searchThis);
+				if (atoi(searchNumber.c_str()) > 1)
+				{
+					for (int j = 1; j < atoi(searchNumber.c_str()); j++)
+						position = renamed[i].find(searchThis, position+1);
+				}
+				if (position != string::npos)
+					position++;
+
+				if (position == string::npos)
+					cout << "\nDid not find \"" + searchThis + "\" in " + renamed[i];
+				else
+					cout << "\nFound \"" + searchThis + "\" in " + renamed[i] + " at position: " << position;
+			}
+		}
+	}
+#pragma endregion
 }
 
 void getFiles(vector<string> &files)
@@ -382,20 +517,31 @@ void storeParam(int pos, char option, int argc, char *argv[])
 	case 'i':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
-		else
+		else if (!nextIsParamOrBlank(pos+1,argc,argv))
 		{
-			insertHere = argv[pos+1];
-			hasParam = true;
+			insertHere = argv[pos+2];
+			for (unsigned int i = 0; i < insertHere.size(); i++)
+			{
+				if (!isdigit(insertHere[i]))
+					badSyntax();
+			}
+			if (atoi(insertHere.c_str()) < 1)
+				badSyntax();
 		}
+
+		insertThis = argv[pos+1];
+		hasParam = true;
+		insertI = false;
 		break;
 	case 'I':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
-		else
-		{
-			insertThis = argv[pos+1];
-			hasParam = true;
-		}
+		else if (!nextIsParamOrBlank(pos+1,argc,argv))
+			insertHere = argv[pos+2];
+
+		insertThis = argv[pos+1];
+		hasParam = true;
+		insertI = true;
 		break;
 	case 'd':
 		if (nextIsParamOrBlank(pos, argc, argv))
@@ -405,6 +551,15 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			dir = argv[pos+1];
 			while (dir.find("\\") != string::npos)
 				dir.replace(dir.find("\\"),1,"/");
+			hasParam = true;
+		}
+		break;
+	case 'e':
+		if (nextIsParamOrBlank(pos, argc, argv))
+			break;
+		else
+		{
+			addExtension = argv[pos+1];
 			hasParam = true;
 		}
 		break;
@@ -427,24 +582,6 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			hasParam = true;
 		}
 		break;
-	case 'o':
-		if (nextIsParamOrBlank(pos,argc,argv))
-			break;
-		else
-		{
-			replaceOriginal = argv[pos+1];
-			hasParam = true;
-		}
-		break;
-	case 'n':
-		if (nextIsParamOrBlank(pos,argc,argv))
-			break;
-		else
-		{
-			replaceNew = argv[pos+1];
-			hasParam = true;
-		}
-		break;
 	case 'p':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
@@ -463,6 +600,15 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			hasParam = true;
 		}
 		break;
+	case 'n':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else if (!nextIsParamOrBlank(pos+1,argc,argv))
+			replaceNew = argv[pos+2];
+
+		replaceOriginal = argv[pos+1];
+		hasParam = true;
+		break;
 	case 'R':
 		repeatAction = true;
 		hasParam = false;
@@ -475,6 +621,22 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			suffix = argv[pos+1];
 			hasParam = true;
 		}
+		break;
+	case 'S':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else if (!nextIsParamOrBlank(pos+1,argc,argv))
+		{
+			searchNumber = argv[pos+2];
+			for (unsigned int i = 0; i < searchNumber.size(); i++)
+			{
+				if (!isdigit(searchNumber[i]))
+					badSyntax();
+			}
+			if (atoi(searchNumber.c_str()) < 1)
+				badSyntax();
+		}
+		searchThis = argv[pos+1];
 		break;
 	case 'v':
 		if (argc > 2)
@@ -545,20 +707,21 @@ void help()
 {
 	cout << "\nBatch Rename\n" 
 		<< "Usage: bren [options]\n\n"
-		<< "Options\n"
-		<< "\t/h\tBrings up this help dialog\n\n"
-		<< "\t/i\tInsert location\n\n"
-		<< "\t/I\tInsert value\n\n"
-		<< "\t/d\tDirectory to rename (defaults to current directory)\n\n"		
-		<< "\t/f\tFile extension (defaults to *)\n\n"
-		<< "\t/F\tRename only this file\n\n"
-		<< "\t/o\tOriginal string to be replaced\n\n"
-		<< "\t/n\tNew string to replace original\n\n"
-		<< "\t/p\tAdd prefix to file names\n\n"
-		<< "\t/r\tString to remove\n\n"
-		<< "\t/R\tRepeat action through whole file\n\n"
-		<< "\t/s\tAdd suffix to file names\n\n"
-		<< "\t/v\tDisplays Batch Rename Version Number\n"
+		<< "Options\n\n"
+		<< " /h\t\t\t\tBrings up this help dialog\n\n"
+		<< " /i <value> <location>\t\tInsert at location\n\n"
+		<< " /I <value> <string>\t\tInsert at string location\n\n"
+		<< " /d\t\t\t\tDirectory to rename \n\t\t\t\t(defaults to current directory)\n\n"	
+		<< " /e <extension name>\t\tAdd extension\n\n"
+		<< " /f\t\t\t\tFile extension (defaults to *)\n\n"
+		<< " /F <filename>\t\t\tRename only this file\n\n"
+		<< " /n <string> <value>\t\tReplace string with value\n\n"
+		<< " /p\t\t\t\tAdd prefix to file names\n\n"
+		<< " /r\t\t\t\tRemove string from file names\n\n"
+		<< " /R\t\t\t\tRepeat action through whole file\n\n"
+		<< " /s\t\t\t\tAdd suffix to file names\n\t\t\t\t(Attempts to append suffix before extension)\n\n"
+		<< " /S <string> <iteration>\tSearch for string position \n\t\t\t\t(Iteration Optional)\n\n"
+		<< " /v\t\t\t\tDisplays Batch Rename Version Number\n"
 		;
 	exit(0);
 }
