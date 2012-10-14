@@ -8,7 +8,7 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.4";
+const static string VERSIONNUM = "1.4.1";
 
 //global vars
 string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
@@ -415,7 +415,6 @@ void main(int argc, char *argv[])
 	//add extension
 	if (!addExtension.empty())
 	{
-		unsigned int count;
 		if (extension != "*")
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
@@ -778,7 +777,7 @@ void help()
 		<< " /h\t\t\t\tBrings up this help dialog\n\n"		
 		<< " /d\t\t\t\tDirectory to rename \n\t\t\t\t(defaults to current directory)\n\n"	
 		<< " /D <start> <end>\t\tDelete section between start and end locations\n\n"
-		<< " /e <extension name>\t\tAdd extension\n\n"
+		<< " /e <extension>\t\t\tAdd extension\n\n"
 		<< " /f\t\t\t\tFile extension (defaults to *)\n\n"
 		<< " /F <filename>\t\t\tRename only this file\n\n"
 		<< " /i <value> <location>\t\tInsert at location\n\n"
