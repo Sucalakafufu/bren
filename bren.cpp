@@ -8,7 +8,7 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.4.1";
+const static string VERSIONNUM = "1.4.2";
 
 //global vars
 string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
@@ -498,8 +498,11 @@ void getFiles(vector<string> &files)
 {
 	ifstream fin;
 	string file;
+	string brenFile = dir + "\\.bren";
+	string command;
 
-	system("DIR /B > .bren");
+	command = "DIR /B > \"" + brenFile + "\"";
+	system(command.c_str());
 
 	fin.open(".bren");
 	while (getline(fin,file))
@@ -509,7 +512,7 @@ void getFiles(vector<string> &files)
 	}
 	fin.close(); fin.clear();
 
-	system("DEL /F .bren");
+	remove(brenFile.c_str());
 }
 
 void findExtensions(vector<string> files, vector<string> &extensions)
