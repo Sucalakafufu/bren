@@ -8,12 +8,12 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.4.2";
+const static string VERSIONNUM = "1.5";
 
 //global vars
 string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
 	addExtension, startDelete, endDelete;
-bool repeatAction, hasParam, insertI;
+bool repeatAction, hasParam, insertI, capitalize, ALLCAPS, allLower;
 
 //functions
 char checkParam(int, char *);
@@ -58,6 +58,9 @@ void main(int argc, char *argv[])
 	repeatAction = false;
 	hasParam = true;
 	insertI = false;
+	capitalize = false;
+	ALLCAPS = false;
+	allLower = false;
 
 	//check all params entered and set vars
 	if (argc == 1)
@@ -85,6 +88,8 @@ void main(int argc, char *argv[])
 				badSyntax();
 		}
 	}
+	if (allLower && ALLCAPS)
+		badSyntax();
 
 	//directory
 	_chdir(dir.c_str());
@@ -101,7 +106,7 @@ void main(int argc, char *argv[])
 		files.push_back(singleFileEdit);
 		findExtensions(files,extensions);
 		renamed = files;
-	}
+	}	
 
 #pragma region replacing
 	//replacing
@@ -195,6 +200,7 @@ void main(int argc, char *argv[])
 							renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
 							command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
 							system(command.c_str());
+							files = renamed;
 						}
 					}
 				}
@@ -492,6 +498,149 @@ void main(int argc, char *argv[])
 		}
 	}
 #pragma endregion
+
+	//reinitialize files vector to new names
+	files = renamed;
+
+#pragma region all lower
+	//all lower
+	if (allLower)
+	{
+		if (extension != "*")
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				if (stringEquals(extension, extensions[i]))
+				{
+					for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+					{
+						if (isalpha(renamed[i][j]))
+						{
+							renamed[i][j] = tolower(renamed[i][j]);
+							command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+							system(command.c_str());
+							files = renamed;
+						}
+					}					
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+				{
+					if (isalpha(renamed[i][j]))
+					{
+						renamed[i][j] = tolower(renamed[i][j]);
+						command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+						system(command.c_str());
+						files = renamed;						
+					}
+				}				
+			}
+		}
+	}
+#pragma endregion 
+
+	//reinitialize files vector to new names
+	files = renamed;
+
+#pragma region capitalize
+	//capitalize
+	if (capitalize)
+	{
+		if (extension != "*")
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				if (stringEquals(extension, extensions[i]))
+				{
+					bool found = false;
+					for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+					{
+						if (found && !isalpha(renamed[i][j]))
+							found = false;
+						else if (!found && isalpha(renamed[i][j]))
+						{
+							renamed[i][j] = toupper(renamed[i][j]);
+							command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+							system(command.c_str());
+							files = renamed;
+							found = true;
+						}
+					}					
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				bool found = false;
+				for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+				{
+					if (found && !isalpha(renamed[i][j]))
+						found = false;
+					else if (!found && isalpha(renamed[i][j]))
+					{
+						renamed[i][j] = toupper(renamed[i][j]);
+						command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+						system(command.c_str());
+						files = renamed;
+						found = true;
+					}
+				}				
+			}
+		}
+	}
+#pragma endregion
+
+	//reinitialize files vector to new names
+	files = renamed;
+
+#pragma region ALLCAPS
+	//ALLCAPS
+	if (ALLCAPS)
+	{
+		if (extension != "*")
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				if (stringEquals(extension, extensions[i]))
+				{
+					for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+					{
+						if (isalpha(renamed[i][j]))
+						{
+							renamed[i][j] = toupper(renamed[i][j]);
+							command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+							system(command.c_str());
+							files = renamed;
+						}
+					}					
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+				{
+					if (isalpha(renamed[i][j]))
+					{
+						renamed[i][j] = toupper(renamed[i][j]);
+						command = "REN \"" + files[i] + "\" \"" + renamed[i] +"\"";
+						system(command.c_str());
+						files = renamed;						
+					}
+				}				
+			}
+		}
+	}
+#pragma endregion 
 }
 
 void getFiles(vector<string> &files)
@@ -583,6 +732,14 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		hasParam = true;
 		insertI = true;
 		break;
+	case 'c':
+		capitalize = true;
+		hasParam = false;
+		break;
+	case 'C':
+		ALLCAPS = true;
+		hasParam = false;
+		break;
 	case 'd':
 		if (nextIsParamOrBlank(pos, argc, argv))
 			break;
@@ -641,6 +798,10 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			singleFileEdit = argv[pos+1];
 			hasParam = true;
 		}
+		break;
+	case 'L':
+		allLower = true;
+		hasParam = false;
 		break;
 	case 'p':
 		if (nextIsParamOrBlank(pos,argc,argv))
@@ -777,7 +938,9 @@ void help()
 	cout << "\nBatch Rename\n" 
 		<< "Usage: bren [options]\n\n"
 		<< "Options\n\n"
-		<< " /h\t\t\t\tBrings up this help dialog\n\n"		
+		<< " /h\t\t\t\tBrings up this help dialog\n\n"	
+		<< " /c\t\t\t\tCapitalize\n\n"
+		<< " /C\t\t\t\tALL CAPS (UMADBRO)\n\n"
 		<< " /d\t\t\t\tDirectory to rename \n\t\t\t\t(defaults to current directory)\n\n"	
 		<< " /D <start> <end>\t\tDelete section between start and end locations\n\n"
 		<< " /e <extension>\t\t\tAdd extension\n\n"
@@ -785,6 +948,7 @@ void help()
 		<< " /F <filename>\t\t\tRename only this file\n\n"
 		<< " /i <value> <location>\t\tInsert at location\n\n"
 		<< " /I <value> <string>\t\tInsert at string location\n\n"
+		<< " /L\t\t\t\tAll lowercase\n\n"
 		<< " /n <string> <value>\t\tReplace string with value\n\n"
 		<< " /p\t\t\t\tAdd prefix to file names\n\n"
 		<< " /r\t\t\t\tRemove string from file names\n\n"
