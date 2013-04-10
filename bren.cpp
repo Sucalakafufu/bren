@@ -8,11 +8,11 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.5";
+const static string VERSIONNUM = "1.6";
 
 //global vars
 string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
-	addExtension, startDelete, endDelete;
+	addExtension, startDelete, endDelete, advancedFile, advancedNewFile;
 bool repeatAction, hasParam, insertI, capitalize, ALLCAPS, allLower;
 
 //functions
@@ -22,6 +22,7 @@ bool nextIsParamOrBlank(int, int, char *[]);
 bool stringEquals(string, string);
 bool isPosNum(string);
 void getFiles(vector<string>&);
+string findExtension(string);
 void findExtensions(vector<string>, vector<string>&);
 void showVersion();
 void help();
@@ -54,6 +55,8 @@ void main(int argc, char *argv[])
 	addExtension.clear();
 	startDelete.clear();
 	endDelete.clear();
+	advancedFile.clear();
+	advancedNewFile.clear();
 	searchNumber = "1";
 	repeatAction = false;
 	hasParam = true;
@@ -76,7 +79,8 @@ void main(int argc, char *argv[])
 				storeParam(count, checkParam(count, argv[count]), argc, argv);
 				if (hasParam)
 				{				
-					if (argv[count][1] == 'S' || argv[count][1] == 'i' || argv[count][1] == 'I' || argv[count][1] == 'n' || argv[count][1] == 'D')
+					if (argv[count][1] == 'S' || argv[count][1] == 'i' || argv[count][1] == 'I' || argv[count][1] == 'n' || argv[count][1] == 'D'
+						|| argv[count][1] == 'a')
 					{
 						if (!nextIsParamOrBlank(count,argc,argv) &&!nextIsParamOrBlank(count+1,argc,argv))
 						count++;
@@ -641,6 +645,18 @@ void main(int argc, char *argv[])
 		}
 	}
 #pragma endregion 
+
+	files = renamed;
+
+#pragma region advanced rename
+	//advanced rename
+	if (!advancedFile.empty() && !advancedNewFile.empty())
+	{
+		command = "REN \"" + advancedFile + "\" \"" + advancedNewFile + findExtension(advancedFile) +"\"";
+		system(command.c_str());
+	}
+		
+#pragma endregion
 }
 
 void getFiles(vector<string> &files)
@@ -664,24 +680,29 @@ void getFiles(vector<string> &files)
 	remove(brenFile.c_str());
 }
 
-void findExtensions(vector<string> files, vector<string> &extensions)
+string findExtension(string file)
 {
 	string extension=""; unsigned int i;
+	for (i=1;i<file.length()&&*(file.end()-i)!='.';i++)
+	{
+		extension = *(file.end()-i)+extension;			
+	}
+
+	if (i<file.length()&&*(file.end()-i)=='.')
+		extension="."+extension;
+	else
+		extension.clear();
+	return extension;
+}
+
+void findExtensions(vector<string> files, vector<string> &extensions)
+{
+	string extension="";
 	for (unsigned int count=0;count<files.size();count++)
 	{
-		for (i=1;i<files[count].length()&&*(files[count].end()-i)!='.';i++)
-		{
-			extension = *(files[count].end()-i)+extension;			
-		}
-
-		if (i<files[count].length()&&*(files[count].end()-i)=='.')
-		{
-			extension="."+extension; extensions.push_back(extension); extension.clear();
-		}
-		else
-		{
-			extensions.push_back(""); extension.clear();
-		}
+		extension = findExtension(files[count]); 
+		extensions.push_back(extension); 
+		extension.clear();
 	}
 }
 
@@ -707,6 +728,15 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			help();
 			hasParam = true;
 		}
+		break;
+	case 'a':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else if (!nextIsParamOrBlank(pos+1,argc,argv))
+			advancedNewFile = argv[pos+2];
+
+		advancedFile = argv[pos+1];
+		hasParam = true;
 		break;
 	case 'i':
 		if (nextIsParamOrBlank(pos,argc,argv))
@@ -939,6 +969,7 @@ void help()
 		<< "Usage: bren [options]\n\n"
 		<< "Options\n\n"
 		<< " /h\t\t\t\tBrings up this help dialog\n\n"	
+		<< " /a <filename> <new filename>\tAdvanced Rename\n\t\t\t\t(Attempts to preserve extension while renaming)\n\n"
 		<< " /c\t\t\t\tCapitalize\n\n"
 		<< " /C\t\t\t\tALL CAPS (UMADBRO)\n\n"
 		<< " /d\t\t\t\tDirectory to rename \n\t\t\t\t(defaults to current directory)\n\n"	
