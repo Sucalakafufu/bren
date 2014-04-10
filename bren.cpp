@@ -8,11 +8,11 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.6";
+const static string VERSIONNUM = "1.7";
 
 //global vars
 string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
-	addExtension, startDelete, endDelete, advancedFile, advancedNewFile;
+	addExtension, startDelete, endDelete, advancedFile, advancedNewFile, oldDIR, newDIR;
 bool repeatAction, hasParam, insertI, capitalize, ALLCAPS, allLower;
 
 //functions
@@ -21,7 +21,9 @@ void storeParam(int, char, int, char*[]);
 bool nextIsParamOrBlank(int, int, char *[]);
 bool stringEquals(string, string);
 bool isPosNum(string);
-void getFiles(vector<string>&);
+void getFiles(vector<string>&, string);
+string removeExtension(string);
+void removeExtensions(vector<string>&);
 string findExtension(string);
 void findExtensions(vector<string>, vector<string>&);
 void showVersion();
@@ -35,6 +37,9 @@ void main(int argc, char *argv[])
 	vector<string> extensions;
 	vector<string> files;
 	vector<string> renamed;
+	vector<string> oldFiles;
+	vector<string> newFiles;
+	vector<string> commands;
 	string::size_type position;
 
 	string command;
@@ -57,6 +62,8 @@ void main(int argc, char *argv[])
 	endDelete.clear();
 	advancedFile.clear();
 	advancedNewFile.clear();
+	oldDIR.clear();
+	newDIR.clear();
 	searchNumber = "1";
 	repeatAction = false;
 	hasParam = true;
@@ -80,7 +87,7 @@ void main(int argc, char *argv[])
 				if (hasParam)
 				{				
 					if (argv[count][1] == 'S' || argv[count][1] == 'i' || argv[count][1] == 'I' || argv[count][1] == 'n' || argv[count][1] == 'D'
-						|| argv[count][1] == 'a')
+						|| argv[count][1] == 'a' || argv[count][1] == 'M')
 					{
 						if (!nextIsParamOrBlank(count,argc,argv) &&!nextIsParamOrBlank(count+1,argc,argv))
 						count++;
@@ -101,7 +108,7 @@ void main(int argc, char *argv[])
 	//get files
 	if (singleFileEdit.empty())
 	{
-		getFiles(files);
+		getFiles(files,dir);
 		findExtensions(files,extensions);
 		renamed = files;
 	}
@@ -657,19 +664,67 @@ void main(int argc, char *argv[])
 	}
 		
 #pragma endregion
+
+#pragma region directory rename
+	//rename directory files to other directory file names
+	if (!oldDIR.empty() && !newDIR.empty())
+	{
+		getFiles(oldFiles, oldDIR); getFiles(newFiles, newDIR);
+		if (oldFiles.size() != newFiles.size())
+		{
+			cout << "\nCannot rename files unless both directories have an equal number of files.\n";
+			exit(0);
+		}
+
+		commands.clear();
+		cout << "\nFile names will be renamed as such:\n\n";
+		for (unsigned int i = 0; i < oldFiles.size(); i++)
+		{
+			commands.push_back("REN \"" + newFiles[i] + "\" \"" + removeExtension(oldFiles[i]) + findExtension(newFiles[i]) +"\"");
+			cout << newFiles[i] + " -> " + removeExtension(oldFiles[i]) + findExtension(newFiles[i]) + "\n";
+		}
+		cout << "\nContinue with operation? (Y\\N): ";
+		string verify; cin >> verify;
+		bool verifying = true;
+		
+		while (verifying)
+		{
+			if (verify == "Y" || verify == "y")
+			{
+				_chdir(newDIR.c_str());
+				for (unsigned int i=0;i<commands.size();i++)
+				{
+					system(commands[i].c_str());
+				}
+				cout << "\nFiles have been successfully renamed\n";
+				verifying = false;
+			}
+			else if (verify == "N" || verify == "n")
+			{
+				cout << "\nDirectory renaming canceled\n";	
+				verifying = false;
+			}
+			else
+			{
+				cout << "\nPlease enter Y or N to verify if you want to continue with renaming: ";
+			}
+		}
+	}
+
+#pragma endregion
 }
 
-void getFiles(vector<string> &files)
+void getFiles(vector<string> &files, string fileDIR)
 {
 	ifstream fin;
 	string file;
-	string brenFile = dir + "\\.bren";
+	string brenFile =".bren";
 	string command;
 
-	command = "DIR /B > \"" + brenFile + "\"";
+	command = "DIR /B \"" + fileDIR + "\" > \"" + brenFile + "\"";
 	system(command.c_str());
 
-	fin.open(".bren");
+	fin.open(brenFile);
 	while (getline(fin,file))
 	{
 		if (file != ".bren")
@@ -678,6 +733,27 @@ void getFiles(vector<string> &files)
 	fin.close(); fin.clear();
 
 	remove(brenFile.c_str());
+}
+
+string removeExtension(string file)
+{
+	string newFile=""; unsigned int i = 1;
+	while (file.size() > 0 && *(file.end()-1) != '.')
+	{
+		file.resize(file.size()-1);			
+	}
+	if (*(file.end()-1)=='.')
+		file.resize(file.size()-1);
+
+	return file;
+}
+
+void removeExtensions(vector<string> &files)
+{
+	for (unsigned int i=0;i<files.size();i++)
+	{
+		removeExtension(files[i]);
+	}
 }
 
 string findExtension(string file)
@@ -851,6 +927,14 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			hasParam = true;
 		}
 		break;
+	case 'M':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else if (!nextIsParamOrBlank(pos+1,argc,argv))
+		{
+			oldDIR = argv[pos+1];
+			newDIR = argv[pos+2];
+		}
 	case 'n':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
@@ -972,19 +1056,20 @@ void help()
 		<< " /a <filename> <new filename>\tAdvanced Rename\n\t\t\t\t(Attempts to preserve extension while renaming)\n\n"
 		<< " /c\t\t\t\tCapitalize\n\n"
 		<< " /C\t\t\t\tALL CAPS (UMADBRO)\n\n"
-		<< " /d\t\t\t\tDirectory to rename \n\t\t\t\t(defaults to current directory)\n\n"	
+		<< " /d <directory>\t\t\tDirectory to rename \n\t\t\t\t(defaults to current directory)\n\n"	
 		<< " /D <start> <end>\t\tDelete section between start and end locations\n\n"
 		<< " /e <extension>\t\t\tAdd extension\n\n"
-		<< " /f\t\t\t\tFile extension (defaults to *)\n\n"
+		<< " /f <extension>\t\t\tFile extension to rename (defaults to *)\n\n"
 		<< " /F <filename>\t\t\tRename only this file\n\n"
 		<< " /i <value> <location>\t\tInsert at location\n\n"
 		<< " /I <value> <string>\t\tInsert at string location\n\n"
 		<< " /L\t\t\t\tAll lowercase\n\n"
+		<< " /M <old Dir> <new Dir>\t\tAttempts to rename new Dir files to the old Dir\n\t\t\t\tfile names in alpha order\n\n"
 		<< " /n <string> <value>\t\tReplace string with value\n\n"
-		<< " /p\t\t\t\tAdd prefix to file names\n\n"
-		<< " /r\t\t\t\tRemove string from file names\n\n"
+		<< " /p <prefix>\t\t\tAdd prefix to file names\n\n"
+		<< " /r <string>\t\t\tRemove string from file names\n\n"
 		<< " /R\t\t\t\tRepeat action through whole file\n\n"
-		<< " /s\t\t\t\tAdd suffix to file names\n\t\t\t\t(Attempts to append suffix before extension)\n\n"
+		<< " /s <suffix>\t\t\tAdd suffix to file names\n\t\t\t\t(Attempts to append suffix before extension)\n\n"
 		<< " /S <string> <iteration>\tSearch for string position \n\t\t\t\t(Iteration Optional)\n\n"
 		<< " /v\t\t\t\tDisplays Batch Rename Version Number\n"
 		;
