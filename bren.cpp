@@ -39,7 +39,6 @@ void main(int argc, char *argv[])
 	vector<string> renamed;
 	vector<string> oldFiles;
 	vector<string> newFiles;
-	vector<string> commands;
 	string::size_type position;
 
 	//initialize vars
@@ -648,11 +647,9 @@ void main(int argc, char *argv[])
 			exit(0);
 		}
 
-		commands.clear();
 		cout << "\nFile names will be renamed as such:\n\n";
 		for (unsigned int i = 0; i < oldFiles.size(); i++)
 		{
-			commands.push_back("REN \"" + newFiles[i] + "\" \"" + removeExtension(oldFiles[i]) + findExtension(newFiles[i]) +"\"");
 			cout << newFiles[i] + " -> " + removeExtension(oldFiles[i]) + findExtension(newFiles[i]) + "\n";
 		}
 		cout << "\nContinue with operation? (Y\\N): ";
@@ -664,9 +661,10 @@ void main(int argc, char *argv[])
 			if (verify == "Y" || verify == "y")
 			{
 				_chdir(newDIR.c_str());
-				for (unsigned int i=0;i<commands.size();i++)
+				for (unsigned int i=0; i<oldFiles.size(); i++)
 				{
-					system(commands[i].c_str());
+					string buffer = removeExtension(oldFiles[i]) + findExtension(newFiles[i]);
+					rename(newFiles[i].c_str(), buffer.c_str());
 				}
 				cout << "\nFiles have been successfully renamed\n";
 				verifying = false;
