@@ -8,11 +8,11 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.8.1";
+const static string VERSIONNUM = "1.8.2";
 
 //global vars
 string dir, extension, prefix, suffix, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
-	addExtension, startDelete, endDelete, advancedFile, advancedNewFile, oldDIR, newDIR;
+	addExtension, startDelete, endDelete, advancedFile, advancedNewFile, oldDIR, newDIR, whitespaceOption;
 bool repeatAction, hasParam, insertI, capitalize, ALLCAPS, allLower;
 vector<string> removeThese;
 vector<string> excludeThese;
@@ -29,6 +29,7 @@ string removeExtension(string);
 void removeExtensions(vector<string>&);
 string findExtension(string);
 void findExtensions(vector<string>, vector<string>&);
+string removeWhitespace(string, string);
 void showVersion();
 void help();
 void badSyntax();
@@ -48,6 +49,7 @@ void main(int argc, char *argv[])
 	dir = getCurrentDir();
 
 	extension = "*";
+	whitespaceOption.clear();
 	prefix.clear();
 	suffix.clear();
 	removeThese.clear();
@@ -87,7 +89,7 @@ void main(int argc, char *argv[])
 				if (hasParam)
 				{				
 					if (argv[count][1] == 'S' || argv[count][1] == 'i' || argv[count][1] == 'I' || argv[count][1] == 'n' || argv[count][1] == 'D'
-						|| argv[count][1] == 'a' || argv[count][1] == 'M')
+						|| argv[count][1] == 'a' || argv[count][1] == 'M' || argv[count][1] == 'w')
 					{
 						if (!nextIsParamOrBlank(count,argc,argv) &&!nextIsParamOrBlank(count+1,argc,argv))
 						count++;
@@ -706,6 +708,42 @@ void main(int argc, char *argv[])
 	}
 #pragma endregion 
 
+#pragma region whitespace
+	//remove whitespace
+	if (!whitespaceOption.empty())
+	{
+		if (repeatAction)
+			badSyntax();
+		else if (extension != "*")
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{
+				if (!hasExcluded(excludeThese, renamed.at(i)))
+				{
+					if (stringEquals(extension, extensions.at(i)))
+					{
+						renamed.at(i) = removeWhitespace(renamed.at(i), whitespaceOption);
+						rename(files.at(i).c_str(), renamed.at(i).c_str());
+						files = renamed;
+					}
+				}
+			}
+		}
+		else
+		{
+			for (unsigned int i = 0; i < renamed.size(); i++)
+			{	
+				if (!hasExcluded(excludeThese, renamed.at(i)))
+				{
+					renamed.at(i) = removeWhitespace(renamed.at(i), whitespaceOption);
+					rename(files.at(i).c_str(), renamed.at(i).c_str());
+					files = renamed;
+				}
+			}
+		}
+	}
+#pragma endregion
+
 #pragma region advanced rename
 	//advanced rename
 	if (!advancedFile.empty() && !advancedNewFile.empty())
@@ -846,6 +884,39 @@ void findExtensions(vector<string> files, vector<string> &extensions)
 		extensions.push_back(extension); 
 		extension.clear();
 	}
+}
+
+string removeWhitespace(string file, string option)
+{
+	if (option.empty())
+		return file;
+	else if (option == "l")
+	{
+		while (file.at(0) == ' ' && file.at(0) != string::npos)
+			file.replace(file.begin(), file.begin()+1, "");
+	}
+	else if (option == "t")
+	{
+		string ext = findExtension(file);
+
+		if (ext.empty())
+		{
+			while (*(file.end()-1) == ' ' && file.end() != file.begin())
+				file.replace(file.end()-1, file.end(), "");
+		}
+		else
+		{
+			while (*(file.end()-ext.length()-1) == ' ' && file.end()-ext.length() != file.begin())
+				file.replace(file.end()-ext.length()-1, file.end()-ext.length(), "");
+		}
+	}
+	else if (option == "*")
+	{
+		while (file.find(" ") != string::npos)
+			file.replace(file.find(" "), 1, "");
+	}
+
+	return file;
 }
 
 char checkParam(int pos, char *param)
@@ -1063,16 +1134,43 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			hasParam = true;
 		}
 		break;
+	case 'w':
+		if (!nextIsParamOrBlank(pos, argc, argv))
+		{
+			whitespaceOption = argv[pos+1];
+			if (whitespaceOption.length() > 1 || (whitespaceOption != "l" && whitespaceOption != "t"))
+				badSyntax();			
+		}
+		else
+			whitespaceOption = "*";
+		hasParam = true;
+		break;
 	default:
 		badSyntax();
 	}
 }
 
-bool nextIsParamOrBlank(int pos, int argc, char *argv[])
+bool nextIsBlank(int pos, int argc, char *argv[])
 {
 	if (pos+1 >= argc)
 		return true;
-	else if (argv[pos+1][0] == '/')
+	else
+		return false;
+}
+
+bool nextIsParam(int pos, int argc, char *argv[])
+{
+	if (argv[pos+1][0] == '/')
+		return true;
+	else 
+		return false;
+}
+
+bool nextIsParamOrBlank(int pos, int argc, char *argv[])
+{
+	if (nextIsBlank(pos, argc, argv))
+		return true;
+	else if (nextIsParam(pos, argc, argv))
 		return true;
 	else
 		return false;
@@ -1156,8 +1254,9 @@ void help()
 		<< " /r <string(s)>\t\t\tRemove string(s) from file names\n\n"
 		<< " /R\t\t\t\tRepeat action through whole file\n\n"
 		<< " /s <suffix>\t\t\tAdd suffix to file names\n\t\t\t\t(Attempts to append suffix before extension)\n\n"
-		<< " /S <string> <iteration>\tSearch for string position \n\t\t\t\t(Iteration Optional)\n\n"
-		<< " /v\t\t\t\tDisplays Batch Rename Version Number\n"
+		<< " /S <string> <iteration>\tSearch for string position\n\t\t\t\t(Iteration Optional)\n\n"
+		<< " /v\t\t\t\tDisplays Batch Rename Version Number\n\n"
+		<< " /w <options>\t\t\tRemove whitespace\n\t\t\t\t(Options: l = leading, t = trailing)\n\t\t\t\tBlank options will remove all whitespace\n\n"
 		;
 	exit(0);
 }
