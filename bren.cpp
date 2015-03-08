@@ -15,6 +15,7 @@ string dir, extension, prefix, suffix, replaceOriginal, replaceNew, insertHere, 
 	addExtension, startDelete, endDelete, advancedFile, advancedNewFile, oldDIR, newDIR;
 bool repeatAction, hasParam, insertI, capitalize, ALLCAPS, allLower;
 vector<string> removeThese;
+vector<string> excludeThese;
 
 //functions
 char checkParam(int, char *);
@@ -23,6 +24,7 @@ bool nextIsParamOrBlank(int, int, char *[]);
 bool stringEquals(string, string);
 bool isPosNum(string);
 void getFiles(vector<string>&, string);
+bool hasExcluded(vector<string>, string);
 string removeExtension(string);
 void removeExtensions(vector<string>&);
 string findExtension(string);
@@ -98,6 +100,15 @@ void main(int argc, char *argv[])
 							count++;
 						}
 					}
+
+					if (argv[count][1] == 'E')
+					{
+						for (unsigned int i = 1; i < excludeThese.size(); i++)
+						{
+							count++;
+						}
+					}
+
 					count++;
 				}
 			}
@@ -105,6 +116,7 @@ void main(int argc, char *argv[])
 				badSyntax();
 		}
 	}
+
 	if (allLower && ALLCAPS)
 		badSyntax();
 
@@ -135,23 +147,27 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					if (repeatAction)
+					if (stringEquals(extension, extensions.at(i)))
 					{
-						while (renamed[i].find(replaceOriginal) != string::npos)
+						if (repeatAction)
 						{
-							renamed[i].replace(renamed[i].find(replaceOriginal), replaceOriginal.length(), replaceNew);
-							rename(files[i].c_str(), renamed[i].c_str());
-							files = renamed;
+							while (renamed.at(i).find(replaceOriginal) != string::npos)
+							{
+								renamed.at(i).replace(renamed.at(i).find(replaceOriginal), replaceOriginal.length(), replaceNew);
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+								files = renamed;
+							}
 						}
-					}
-					else
-					{
-						if (renamed[i].find(replaceOriginal) != string::npos)
+						else
 						{
-							renamed[i].replace(renamed[i].find(replaceOriginal), replaceOriginal.length(), replaceNew);
-							rename(files[i].c_str(), renamed[i].c_str());					
+							if (renamed.at(i).find(replaceOriginal) != string::npos)
+							{
+								renamed.at(i).replace(renamed.at(i).find(replaceOriginal), replaceOriginal.length(), replaceNew);
+								rename(files.at(i).c_str(), renamed.at(i).c_str());	
+								files = renamed;
+							}
 						}
 					}
 				}
@@ -161,30 +177,31 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (repeatAction)
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					while (renamed[i].find(replaceOriginal) != string::npos)
+					if (repeatAction)
 					{
-						renamed[i].replace(renamed[i].find(replaceOriginal), replaceOriginal.length(), replaceNew);
-						rename(files[i].c_str(), renamed[i].c_str());
-						files = renamed;
+						while (renamed.at(i).find(replaceOriginal) != string::npos)
+						{
+							renamed.at(i).replace(renamed.at(i).find(replaceOriginal), replaceOriginal.length(), replaceNew);
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
+							files = renamed;
+						}
 					}
-				}
-				else
-				{
-					if (renamed[i].find(replaceOriginal) != string::npos)
+					else
 					{
-						renamed[i].replace(renamed[i].find(replaceOriginal), replaceOriginal.length(), replaceNew);
-						rename(files[i].c_str(), renamed[i].c_str());
+						if (renamed.at(i).find(replaceOriginal) != string::npos)
+						{
+							renamed.at(i).replace(renamed.at(i).find(replaceOriginal), replaceOriginal.length(), replaceNew);
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
+							files = renamed;
+						}
 					}
 				}
 			}
 		}
 	}
 #pragma endregion
-
-	//reinitialize files vector to new names
-	files = renamed;
 
 #pragma region removing
 	//removing
@@ -194,29 +211,32 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					if (repeatAction)
+					if (stringEquals(extension, extensions.at(i)))
 					{
-						for (unsigned int j = 0; j < removeThese.size(); j++)
+						if (repeatAction)
 						{
-							while (renamed[i].find(removeThese.at(j)) != string::npos)
+							for (unsigned int j = 0; j < removeThese.size(); j++)
 							{
-								renamed[i].replace(renamed[i].find(removeThese.at(j)), removeThese.at(j).length(), "");
-								rename(files[i].c_str(), renamed[i].c_str());
-								files = renamed;
+								while (renamed.at(i).find(removeThese.at(j)) != string::npos)
+								{
+									renamed.at(i).replace(renamed.at(i).find(removeThese.at(j)), removeThese.at(j).length(), "");
+									rename(files.at(i).c_str(), renamed.at(i).c_str());
+									files = renamed;
+								}
 							}
 						}
-					}
-					else
-					{
-						for (unsigned int j = 0; j < removeThese.size(); j++)
+						else
 						{
-							if (renamed[i].find(removeThese.at(j)) != string::npos)
+							for (unsigned int j = 0; j < removeThese.size(); j++)
 							{
-								renamed[i].replace(renamed[i].find(removeThese.at(j)), removeThese.at(j).length(), "");
-								rename(files[i].c_str(), renamed[i].c_str());
-								files = renamed;
+								if (renamed.at(i).find(removeThese.at(j)) != string::npos)
+								{
+									renamed.at(i).replace(renamed.at(i).find(removeThese.at(j)), removeThese.at(j).length(), "");
+									rename(files.at(i).c_str(), renamed.at(i).c_str());
+									files = renamed;
+								}
 							}
 						}
 					}
@@ -227,27 +247,30 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (repeatAction)
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					for (unsigned int j = 0; j < removeThese.size(); j++)
+					if (repeatAction)
 					{
-						while (renamed[i].find(removeThese.at(j)) != string::npos)
+						for (unsigned int j = 0; j < removeThese.size(); j++)
 						{
-							renamed[i].replace(renamed[i].find(removeThese.at(j)), removeThese.at(j).length(), "");
-							rename(files[i].c_str(), renamed[i].c_str());
-							files = renamed;
+							while (renamed.at(i).find(removeThese.at(j)) != string::npos)
+							{
+								renamed.at(i).replace(renamed.at(i).find(removeThese.at(j)), removeThese.at(j).length(), "");
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+								files = renamed;
+							}
 						}
 					}
-				}
-				else
-				{
-					for (unsigned int j = 0; j < removeThese.size(); j++)
+					else
 					{
-						if (renamed[i].find(removeThese.at(j)) != string::npos)
+						for (unsigned int j = 0; j < removeThese.size(); j++)
 						{
-							renamed[i].replace(renamed[i].find(removeThese.at(j)), removeThese.at(j).length(), "");
-							rename(files[i].c_str(), renamed[i].c_str());
-							files = renamed;
+							if (renamed.at(i).find(removeThese.at(j)) != string::npos)
+							{
+								renamed.at(i).replace(renamed.at(i).find(removeThese.at(j)), removeThese.at(j).length(), "");
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+								files = renamed;
+							}
 						}
 					}
 				}
@@ -255,9 +278,6 @@ void main(int argc, char *argv[])
 		}
 	}
 #pragma endregion
-
-	//reinitialize files vector to new names
-	files = renamed;
 
 #pragma region removing section
 	//removing section
@@ -270,13 +290,17 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
-				{					
-					if (startDelete == endDelete)
-						renamed[i].erase(renamed[i].begin()+atoi(startDelete.c_str())-1);
-					else
-						renamed[i].erase(renamed[i].begin()+atoi(startDelete.c_str())-1,renamed[i].begin()+atoi(endDelete.c_str()));
-					rename(files[i].c_str(), renamed[i].c_str());					
+				if (!hasExcluded(excludeThese, renamed.at(i)))
+				{
+					if (stringEquals(extension, extensions.at(i)))
+					{					
+						if (startDelete == endDelete)
+							renamed.at(i).erase(renamed.at(i).begin()+atoi(startDelete.c_str())-1);
+						else
+							renamed.at(i).erase(renamed.at(i).begin()+atoi(startDelete.c_str())-1,renamed.at(i).begin()+atoi(endDelete.c_str()));
+						rename(files.at(i).c_str(), renamed.at(i).c_str());	
+						files = renamed;
+					}
 				}
 			}
 		}
@@ -284,18 +308,19 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (startDelete == endDelete)
-					renamed[i].erase(renamed[i].begin()+atoi(startDelete.c_str())-1);
-				else
-					renamed[i].erase(renamed[i].begin()+atoi(startDelete.c_str())-1,renamed[i].begin()+atoi(endDelete.c_str()));
-				rename(files[i].c_str(), renamed[i].c_str());
+				if (!hasExcluded(excludeThese, renamed.at(i)))
+				{
+					if (startDelete == endDelete)
+						renamed.at(i).erase(renamed.at(i).begin()+atoi(startDelete.c_str())-1);
+					else
+						renamed.at(i).erase(renamed.at(i).begin()+atoi(startDelete.c_str())-1,renamed.at(i).begin()+atoi(endDelete.c_str()));
+					rename(files.at(i).c_str(), renamed.at(i).c_str());
+					files = renamed;
+				}
 			}
 		}
 	}
 #pragma endregion
-
-	//reinitialize files vector to new names
-	files = renamed;
 
 #pragma region inserting
 	//inserting
@@ -307,23 +332,26 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
-				{				
-					if (!insertI)
-					{
-						renamed[i].insert(renamed[i].begin()+atoi(insertHere.c_str())-1,insertThis.begin(),insertThis.end());
-						rename(files[i].c_str(), renamed[i].c_str());
-					}
-					else
-					{
-						position = renamed[i].find(insertHere);
-						if (position != string::npos)
+				if (!hasExcluded(excludeThese, renamed.at(i)))
+				{
+					if (stringEquals(extension, extensions.at(i)))
+					{				
+						if (!insertI)
 						{
-							renamed[i].insert(renamed[i].begin()+position,insertThis.begin(),insertThis.end());
-							rename(files[i].c_str(), renamed[i].c_str());
+							renamed.at(i).insert(renamed.at(i).begin()+atoi(insertHere.c_str())-1,insertThis.begin(),insertThis.end());
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
 						}
-					}					
-					files = renamed;
+						else
+						{
+							position = renamed.at(i).find(insertHere);
+							if (position != string::npos)
+							{
+								renamed.at(i).insert(renamed.at(i).begin()+position,insertThis.begin(),insertThis.end());
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+							}
+						}					
+						files = renamed;
+					}
 				}
 			}
 		}
@@ -331,27 +359,28 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!insertI)
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					renamed[i].insert(renamed[i].begin()+atoi(insertHere.c_str())-1,insertThis.begin(),insertThis.end());
-					rename(files[i].c_str(), renamed[i].c_str());
-				}
-				else
-				{
-					position = renamed[i].find(insertHere);
-					if (position != string::npos)
+					if (!insertI)
 					{
-						renamed[i].insert(renamed[i].begin()+position,insertThis.begin(),insertThis.end());
-						rename(files[i].c_str(), renamed[i].c_str());
+						renamed.at(i).insert(renamed.at(i).begin()+atoi(insertHere.c_str())-1,insertThis.begin(),insertThis.end());
+						rename(files.at(i).c_str(), renamed.at(i).c_str());
 					}
+					else
+					{
+						position = renamed.at(i).find(insertHere);
+						if (position != string::npos)
+						{
+							renamed.at(i).insert(renamed.at(i).begin()+position,insertThis.begin(),insertThis.end());
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
+						}
+					}
+					files = renamed;
 				}
-				files = renamed;
 			}
 		}
 	}
 #pragma endregion
-	//reinitialize files vector to new names
-	files = renamed;
 
 #pragma region prefix
 	//prefix
@@ -361,26 +390,31 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					renamed[i] = prefix + renamed[i];
-					rename(files[i].c_str(), renamed[i].c_str());			
+					if (stringEquals(extension, extensions.at(i)))
+					{
+						renamed.at(i) = prefix + renamed.at(i);
+						rename(files.at(i).c_str(), renamed.at(i).c_str());	
+						files = renamed;
+					}
 				}
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
-			{			
-				renamed[i] = prefix + renamed[i];
-				rename(files[i].c_str(), renamed[i].c_str());
+			{	
+				if (!hasExcluded(excludeThese, renamed.at(i)))
+				{
+					renamed.at(i) = prefix + renamed.at(i);
+					rename(files.at(i).c_str(), renamed.at(i).c_str());
+					files = renamed;
+				}
 			}
 		}
 	}
 #pragma endregion
-
-	//reinitialize files vector to new names
-	files = renamed;
 
 #pragma region suffix
 	//suffix
@@ -391,44 +425,49 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
-				{			
-					count = 1;
-					while (count<renamed[i].length()&&*(renamed[i].end()-count)!='.')
-						count++;
+				if (!hasExcluded(excludeThese, renamed.at(i)))
+				{
+					if (stringEquals(extension, extensions.at(i)))
+					{			
+						count = 1;
+						while (count<renamed.at(i).length()&&*(renamed.at(i).end()-count)!='.')
+							count++;
 
-					if (count == renamed[i].length())
-						renamed[i] = renamed[i] + suffix;
-					else
-					{
-						renamed[i].insert(renamed[i].end()-count,suffix.begin(),suffix.end());
+						if (count == renamed.at(i).length())
+							renamed.at(i) = renamed.at(i) + suffix;
+						else
+						{
+							renamed.at(i).insert(renamed.at(i).end()-count,suffix.begin(),suffix.end());
+						}
+						rename(files.at(i).c_str(), renamed.at(i).c_str());
+						files = renamed;
 					}
-					rename(files[i].c_str(), renamed[i].c_str());
 				}
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < files.size(); i++)
-			{			
-				count = 1;
-				while (count<renamed[i].length()&&*(renamed[i].end()-count)!='.')
-					count++;
-
-				if (count == renamed[i].length())
-					renamed[i] = renamed[i] + suffix;
-				else
+			{
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					renamed[i].insert(renamed[i].end()-count,suffix.begin(),suffix.end());
+					count = 1;
+					while (count<renamed.at(i).length()&&*(renamed.at(i).end()-count)!='.')
+						count++;
+
+					if (count == renamed.at(i).length())
+						renamed.at(i) = renamed.at(i) + suffix;
+					else
+					{
+						renamed.at(i).insert(renamed.at(i).end()-count,suffix.begin(),suffix.end());
+					}
+					rename(files.at(i).c_str(), renamed.at(i).c_str());
+					files = renamed;
 				}
-				rename(files[i].c_str(), renamed[i].c_str());
 			}
 		}
 	}
 #pragma endregion
-	
-	//reinitialize files vector to new names
-	files = renamed;
 
 #pragma region add extension
 	//add extension
@@ -438,27 +477,32 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
-				{			
-					renamed[i] = renamed[i] + addExtension;
-					rename(files[i].c_str(), renamed[i].c_str());
+				if (!hasExcluded(excludeThese, renamed.at(i)))
+				{
+					if (stringEquals(extension, extensions.at(i)))
+					{			
+						renamed.at(i) = renamed.at(i) + addExtension;
+						rename(files.at(i).c_str(), renamed.at(i).c_str());
+						files = renamed;
+					}
 				}
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < files.size(); i++)
-			{			
-				renamed[i] = renamed[i] + addExtension;
-				rename(files[i].c_str(), renamed[i].c_str());
+			{	
+				if (!hasExcluded(excludeThese, renamed.at(i)))
+				{
+					renamed.at(i) = renamed.at(i) + addExtension;
+					rename(files.at(i).c_str(), renamed.at(i).c_str());
+					files = renamed;
+				}
 			}
 		}
 	}
 
 #pragma endregion
-
-	//reinitialize files vector to new names
-	files = renamed;
 
 #pragma region search
 	//search
@@ -470,48 +514,51 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
-				{				
-					position = renamed[i].find(searchThis);
-					if (atoi(searchNumber.c_str()) > 1)
-					{
-						for (int j = 1; j < atoi(searchNumber.c_str()); j++)
-							position = renamed[i].find(searchThis, position+1);
-					}
-					if (position != string::npos)
-						position++;
+				if (!hasExcluded(excludeThese, renamed.at(i)))
+				{
+					if (stringEquals(extension, extensions.at(i)))
+					{				
+						position = renamed.at(i).find(searchThis);
+						if (atoi(searchNumber.c_str()) > 1)
+						{
+							for (int j = 1; j < atoi(searchNumber.c_str()); j++)
+								position = renamed.at(i).find(searchThis, position+1);
+						}
+						if (position != string::npos)
+							position++;
 
-					if (position == string::npos)
-						cout << "\nDid not find \"" + searchThis + "\" in " + renamed[i];
-					else
-						cout << "\nFound \"" + searchThis + "\" in " + renamed[i] + " at position: " << position;
+						if (position == string::npos)
+							cout << "\nDid not find \"" + searchThis + "\" in " + renamed.at(i);
+						else
+							cout << "\nFound \"" + searchThis + "\" in " + renamed.at(i) + " at position: " << position;
+					}
 				}
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
-			{				
-				position = renamed[i].find(searchThis);
-				if (atoi(searchNumber.c_str()) > 1)
+			{	
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					for (int j = 1; j < atoi(searchNumber.c_str()); j++)
-						position = renamed[i].find(searchThis, position+1);
-				}
-				if (position != string::npos)
-					position++;
+					position = renamed.at(i).find(searchThis);
+					if (atoi(searchNumber.c_str()) > 1)
+					{
+						for (int j = 1; j < atoi(searchNumber.c_str()); j++)
+							position = renamed.at(i).find(searchThis, position+1);
+					}
+					if (position != string::npos)
+						position++;
 
-				if (position == string::npos)
-					cout << "\nDid not find \"" + searchThis + "\" in " + renamed[i];
-				else
-					cout << "\nFound \"" + searchThis + "\" in " + renamed[i] + " at position: " << position;
+					if (position == string::npos)
+						cout << "\nDid not find \"" + searchThis + "\" in " + renamed.at(i);
+					else
+						cout << "\nFound \"" + searchThis + "\" in " + renamed.at(i) + " at position: " << position;
+				}
 			}
 		}
 	}
 #pragma endregion
-
-	//reinitialize files vector to new names
-	files = renamed;
 
 #pragma region all lower
 	//all lower
@@ -521,17 +568,20 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+					if (stringEquals(extension, extensions.at(i)))
 					{
-						if (isalpha(renamed[i][j]))
+						for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
 						{
-							renamed[i][j] = tolower(renamed[i][j]);
-							rename(files[i].c_str(), renamed[i].c_str());
-							files = renamed;
-						}
-					}					
+							if (isalpha(renamed[i][j]))
+							{
+								renamed[i][j] = tolower(renamed[i][j]);
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+								files = renamed;
+							}
+						}					
+					}
 				}
 			}
 		}
@@ -539,22 +589,22 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					if (isalpha(renamed[i][j]))
+					for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
 					{
-						renamed[i][j] = tolower(renamed[i][j]);
-						rename(files[i].c_str(), renamed[i].c_str());
-						files = renamed;						
+						if (isalpha(renamed[i][j]))
+						{
+							renamed[i][j] = tolower(renamed[i][j]);
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
+							files = renamed;						
+						}
 					}
-				}				
+				}
 			}
 		}
 	}
 #pragma endregion 
-
-	//reinitialize files vector to new names
-	files = renamed;
 
 #pragma region capitalize
 	//capitalize
@@ -564,21 +614,24 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					bool found = false;
-					for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+					if (stringEquals(extension, extensions.at(i)))
 					{
-						if (found && !isalpha(renamed[i][j]))
-							found = false;
-						else if (!found && isalpha(renamed[i][j]))
+						bool found = false;
+						for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
 						{
-							renamed[i][j] = toupper(renamed[i][j]);
-							rename(files[i].c_str(), renamed[i].c_str());
-							files = renamed;
-							found = true;
-						}
-					}					
+							if (found && !isalpha(renamed[i][j]))
+								found = false;
+							else if (!found && isalpha(renamed[i][j]))
+							{
+								renamed[i][j] = toupper(renamed[i][j]);
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+								files = renamed;
+								found = true;
+							}
+						}					
+					}
 				}
 			}
 		}
@@ -586,26 +639,26 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				bool found = false;
-				for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					if (found && !isalpha(renamed[i][j]))
-						found = false;
-					else if (!found && isalpha(renamed[i][j]))
+					bool found = false;
+					for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
 					{
-						renamed[i][j] = toupper(renamed[i][j]);
-						rename(files[i].c_str(), renamed[i].c_str());
-						files = renamed;
-						found = true;
+						if (found && !isalpha(renamed[i][j]))
+							found = false;
+						else if (!found && isalpha(renamed[i][j]))
+						{
+							renamed[i][j] = toupper(renamed[i][j]);
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
+							files = renamed;
+							found = true;
+						}
 					}
-				}				
+				}
 			}
 		}
 	}
 #pragma endregion
-
-	//reinitialize files vector to new names
-	files = renamed;
 
 #pragma region ALLCAPS
 	//ALLCAPS
@@ -615,17 +668,20 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (stringEquals(extension, extensions[i]))
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+					if (stringEquals(extension, extensions.at(i)))
 					{
-						if (isalpha(renamed[i][j]))
+						for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
 						{
-							renamed[i][j] = toupper(renamed[i][j]);
-							rename(files[i].c_str(), renamed[i].c_str());
-							files = renamed;
-						}
-					}					
+							if (isalpha(renamed[i][j]))
+							{
+								renamed[i][j] = toupper(renamed[i][j]);
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+								files = renamed;
+							}
+						}					
+					}
 				}
 			}
 		}
@@ -633,21 +689,22 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				for (unsigned int j = 0; j < renamed[i].size()-extensions[i].size(); j++)
+				if (!hasExcluded(excludeThese, renamed.at(i)))
 				{
-					if (isalpha(renamed[i][j]))
+					for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
 					{
-						renamed[i][j] = toupper(renamed[i][j]);
-						rename(files[i].c_str(), renamed[i].c_str());
-						files = renamed;						
+						if (isalpha(renamed[i][j]))
+						{
+							renamed[i][j] = toupper(renamed[i][j]);
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
+							files = renamed;						
+						}
 					}
-				}				
+				}
 			}
 		}
 	}
 #pragma endregion 
-
-	files = renamed;
 
 #pragma region advanced rename
 	//advanced rename
@@ -655,6 +712,7 @@ void main(int argc, char *argv[])
 	{
 		advancedNewFile = advancedNewFile+findExtension(advancedFile);
 		rename(advancedFile.c_str(), advancedNewFile.c_str());
+		files = renamed;
 	}
 		
 #pragma endregion
@@ -673,7 +731,7 @@ void main(int argc, char *argv[])
 		cout << "\nFile names will be renamed as such:\n\n";
 		for (unsigned int i = 0; i < oldFiles.size(); i++)
 		{
-			cout << newFiles[i] + " -> " + removeExtension(oldFiles[i]) + findExtension(newFiles[i]) + "\n";
+			cout << newFiles.at(i) + " -> " + removeExtension(oldFiles.at(i)) + findExtension(newFiles.at(i)) + "\n";
 		}
 		cout << "\nContinue with operation? (Y\\N): ";
 		string verify; cin >> verify;
@@ -686,8 +744,8 @@ void main(int argc, char *argv[])
 				_chdir(newDIR.c_str());
 				for (unsigned int i=0; i<oldFiles.size(); i++)
 				{
-					string buffer = removeExtension(oldFiles[i]) + findExtension(newFiles[i]);
-					rename(newFiles[i].c_str(), buffer.c_str());
+					string buffer = removeExtension(oldFiles.at(i)) + findExtension(newFiles.at(i));
+					rename(newFiles.at(i).c_str(), buffer.c_str());
 				}
 				cout << "\nFiles have been successfully renamed\n";
 				verifying = false;
@@ -732,6 +790,17 @@ void getFiles(vector<string> &files, string fileDIR)
 	remove(brenFile.c_str());
 }
 
+bool hasExcluded(vector<string> excludeThese, string compare)
+{
+	for (unsigned int i = 0; i < excludeThese.size(); i++)
+	{
+		if (stringEquals(excludeThese.at(i), compare))
+			return true;
+	}
+
+	return false;
+}
+
 string removeExtension(string file)
 {
 	string newFile=""; unsigned int i = 1;
@@ -749,7 +818,7 @@ void removeExtensions(vector<string> &files)
 {
 	for (unsigned int i=0;i<files.size();i++)
 	{
-		removeExtension(files[i]);
+		removeExtension(files.at(i));
 	}
 }
 
@@ -857,6 +926,20 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		{
 			addExtension = argv[pos+1];
 			hasParam = true;
+		}
+		break;
+	case 'E':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else
+		{
+			int i = 0;
+			while (!nextIsParamOrBlank(pos+i,argc,argv))
+			{
+				excludeThese.push_back(argv[pos+1+i]);
+				i++;
+				hasParam = true;
+			}
 		}
 		break;
 	case 'f':
@@ -1061,6 +1144,7 @@ void help()
 		<< " /d <directory>\t\t\tDirectory to rename \n\t\t\t\t(defaults to current directory)\n\n"	
 		<< " /D <start> <end>\t\tDelete section between start and end locations\n\n"
 		<< " /e <extension>\t\t\tAdd extension\n\n"
+		<< " /E <filename(s)>\t\tExclude file(s) from renaming\n\n"
 		<< " /f <extension>\t\t\tFile extension to rename (defaults to *)\n\n"
 		<< " /F <filename>\t\t\tRename only this file\n\n"
 		<< " /i <value> <location>\t\tInsert at location\n\n"
