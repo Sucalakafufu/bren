@@ -8,12 +8,13 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.8";
+const static string VERSIONNUM = "1.8.1";
 
 //global vars
-string dir, extension, prefix, suffix, removeThis, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
+string dir, extension, prefix, suffix, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
 	addExtension, startDelete, endDelete, advancedFile, advancedNewFile, oldDIR, newDIR;
 bool repeatAction, hasParam, insertI, capitalize, ALLCAPS, allLower;
+vector<string> removeThese;
 
 //functions
 char checkParam(int, char *);
@@ -47,7 +48,7 @@ void main(int argc, char *argv[])
 	extension = "*";
 	prefix.clear();
 	suffix.clear();
-	removeThis.clear();
+	removeThese.clear();
 	replaceOriginal.clear();
 	replaceNew.clear();
 	insertHere.clear();
@@ -88,6 +89,14 @@ void main(int argc, char *argv[])
 					{
 						if (!nextIsParamOrBlank(count,argc,argv) &&!nextIsParamOrBlank(count+1,argc,argv))
 						count++;
+					}
+
+					if (argv[count][1] == 'r')
+					{
+						for (unsigned int i = 1; i < removeThese.size(); i++)
+						{
+							count++;
+						}
 					}
 					count++;
 				}
@@ -179,7 +188,7 @@ void main(int argc, char *argv[])
 
 #pragma region removing
 	//removing
-	if (!removeThis.empty())
+	if (!removeThese.empty())
 	{
 		if (extension != "*")
 		{
@@ -189,20 +198,26 @@ void main(int argc, char *argv[])
 				{
 					if (repeatAction)
 					{
-						while (renamed[i].find(removeThis) != string::npos)
+						for (unsigned int j = 0; j < removeThese.size(); j++)
 						{
-							renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
-							rename(files[i].c_str(), renamed[i].c_str());
-							files = renamed;
+							while (renamed[i].find(removeThese.at(j)) != string::npos)
+							{
+								renamed[i].replace(renamed[i].find(removeThese.at(j)), removeThese.at(j).length(), "");
+								rename(files[i].c_str(), renamed[i].c_str());
+								files = renamed;
+							}
 						}
 					}
 					else
 					{
-						if (renamed[i].find(removeThis) != string::npos)
+						for (unsigned int j = 0; j < removeThese.size(); j++)
 						{
-							renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
-							rename(files[i].c_str(), renamed[i].c_str());
-							files = renamed;
+							if (renamed[i].find(removeThese.at(j)) != string::npos)
+							{
+								renamed[i].replace(renamed[i].find(removeThese.at(j)), removeThese.at(j).length(), "");
+								rename(files[i].c_str(), renamed[i].c_str());
+								files = renamed;
+							}
 						}
 					}
 				}
@@ -214,18 +229,26 @@ void main(int argc, char *argv[])
 			{
 				if (repeatAction)
 				{
-					while (renamed[i].find(removeThis) != string::npos)
+					for (unsigned int j = 0; j < removeThese.size(); j++)
 					{
-						renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
-						rename(files[i].c_str(), renamed[i].c_str());
+						while (renamed[i].find(removeThese.at(j)) != string::npos)
+						{
+							renamed[i].replace(renamed[i].find(removeThese.at(j)), removeThese.at(j).length(), "");
+							rename(files[i].c_str(), renamed[i].c_str());
+							files = renamed;
+						}
 					}
 				}
 				else
 				{
-					if (renamed[i].find(removeThis) != string::npos)
+					for (unsigned int j = 0; j < removeThese.size(); j++)
 					{
-						renamed[i].replace(renamed[i].find(removeThis), removeThis.length(), "");
-						rename(files[i].c_str(), renamed[i].c_str());
+						if (renamed[i].find(removeThese.at(j)) != string::npos)
+						{
+							renamed[i].replace(renamed[i].find(removeThese.at(j)), removeThese.at(j).length(), "");
+							rename(files[i].c_str(), renamed[i].c_str());
+							files = renamed;
+						}
 					}
 				}
 			}
@@ -682,13 +705,17 @@ void main(int argc, char *argv[])
 	}
 
 #pragma endregion
+
+#pragma region series rename
+	//rename files based on a series
+#pragma endregion
 }
 
 void getFiles(vector<string> &files, string fileDIR)
 {
 	ifstream fin;
 	string file;
-	string brenFile =".bren";
+	string brenFile = ".bren";
 	string command;
 
 	command = "DIR /B \"" + fileDIR + "\" > \"" + brenFile + "\"";
@@ -697,7 +724,7 @@ void getFiles(vector<string> &files, string fileDIR)
 	fin.open(brenFile);
 	while (getline(fin,file))
 	{
-		if (file != ".bren")
+		if (file != brenFile)
 			files.push_back(file);
 	}
 	fin.close(); fin.clear();
@@ -784,30 +811,6 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		advancedFile = argv[pos+1];
 		hasParam = true;
 		break;
-	case 'i':
-		if (nextIsParamOrBlank(pos,argc,argv))
-			break;
-		else if (!nextIsParamOrBlank(pos+1,argc,argv))
-		{
-			insertHere = argv[pos+2];
-			if (!isPosNum(insertHere))
-				badSyntax();			
-		}
-
-		insertThis = argv[pos+1];
-		hasParam = true;
-		insertI = false;
-		break;
-	case 'I':
-		if (nextIsParamOrBlank(pos,argc,argv))
-			break;
-		else if (!nextIsParamOrBlank(pos+1,argc,argv))
-			insertHere = argv[pos+2];
-
-		insertThis = argv[pos+1];
-		hasParam = true;
-		insertI = true;
-		break;
 	case 'c':
 		capitalize = true;
 		hasParam = false;
@@ -875,27 +878,33 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			hasParam = true;
 		}
 		break;
+	case 'i':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else if (!nextIsParamOrBlank(pos+1,argc,argv))
+		{
+			insertHere = argv[pos+2];
+			if (!isPosNum(insertHere))
+				badSyntax();			
+		}
+
+		insertThis = argv[pos+1];
+		hasParam = true;
+		insertI = false;
+		break;
+	case 'I':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else if (!nextIsParamOrBlank(pos+1,argc,argv))
+			insertHere = argv[pos+2];
+
+		insertThis = argv[pos+1];
+		hasParam = true;
+		insertI = true;
+		break;
 	case 'L':
 		allLower = true;
 		hasParam = false;
-		break;
-	case 'p':
-		if (nextIsParamOrBlank(pos,argc,argv))
-			break;
-		else
-		{
-			prefix = argv[pos+1];
-			hasParam = true;
-		}
-		break;
-	case 'r':
-		if (nextIsParamOrBlank(pos,argc,argv))
-			break;
-		else
-		{
-			removeThis = argv[pos+1];
-			hasParam = true;
-		}
 		break;
 	case 'M':
 		if (nextIsParamOrBlank(pos,argc,argv))
@@ -914,6 +923,29 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		replaceOriginal = argv[pos+1];
 		hasParam = true;
 		break;
+	case 'p':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else
+		{
+			prefix = argv[pos+1];
+			hasParam = true;
+		}
+		break;
+	case 'r':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else
+		{
+			int i = 0;
+			while (!nextIsParamOrBlank(pos+i,argc,argv))
+			{
+				removeThese.push_back(argv[pos+1+i]);
+				i++;
+				hasParam = true;
+			}
+		}
+		break;	
 	case 'R':
 		repeatAction = true;
 		hasParam = false;
@@ -1037,7 +1069,7 @@ void help()
 		<< " /M <old Dir> <new Dir>\t\tAttempts to rename new Dir files to the old Dir\n\t\t\t\tfile names in alpha order\n\n"
 		<< " /n <string> <value>\t\tReplace string with value\n\n"
 		<< " /p <prefix>\t\t\tAdd prefix to file names\n\n"
-		<< " /r <string>\t\t\tRemove string from file names\n\n"
+		<< " /r <string(s)>\t\t\tRemove string(s) from file names\n\n"
 		<< " /R\t\t\t\tRepeat action through whole file\n\n"
 		<< " /s <suffix>\t\t\tAdd suffix to file names\n\t\t\t\t(Attempts to append suffix before extension)\n\n"
 		<< " /S <string> <iteration>\tSearch for string position \n\t\t\t\t(Iteration Optional)\n\n"
