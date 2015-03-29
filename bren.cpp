@@ -8,14 +8,16 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.8.2";
+const static string VERSIONNUM = "1.8.2.1";
 
 //global vars
-string dir, extension, prefix, suffix, replaceOriginal, replaceNew, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
+string dir, extension, prefix, suffix, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
 	addExtension, startDelete, endDelete, advancedFile, advancedNewFile, oldDIR, newDIR, whitespaceOption;
 bool repeatAction, hasParam, insertI, capitalize, ALLCAPS, allLower;
-vector<string> removeThese;
 vector<string> excludeThese;
+vector<string> removeThese;
+vector<string> replaceOriginals;
+vector<string> replaceNews;
 
 //functions
 char checkParam(int, char *);
@@ -53,8 +55,6 @@ void main(int argc, char *argv[])
 	prefix.clear();
 	suffix.clear();
 	removeThese.clear();
-	replaceOriginal.clear();
-	replaceNew.clear();
 	insertHere.clear();
 	insertThis.clear();
 	singleFileEdit.clear();
@@ -141,9 +141,9 @@ void main(int argc, char *argv[])
 
 #pragma region replacing
 	//replacing
-	if ((!replaceOriginal.empty() && replaceNew.empty()) || (replaceOriginal.empty() && !replaceNew.empty()))
+	if ((!replaceOriginals.empty() && replaceNews.empty()) || (replaceOriginals.empty() && !replaceNews.empty()))
 		badSyntax();
-	else if (!replaceOriginal.empty() && !replaceNew.empty())
+	else if (!replaceOriginals.empty() && !replaceNews.empty())
 	{
 		if (extension != "*")
 		{
@@ -155,20 +155,26 @@ void main(int argc, char *argv[])
 					{
 						if (repeatAction)
 						{
-							while (renamed.at(i).find(replaceOriginal) != string::npos)
-							{
-								renamed.at(i).replace(renamed.at(i).find(replaceOriginal), replaceOriginal.length(), replaceNew);
-								rename(files.at(i).c_str(), renamed.at(i).c_str());
-								files = renamed;
+							for (unsigned int j = 0; j < replaceOriginals.size(); j++)
+							{						
+								while (renamed.at(i).find(replaceOriginals.at(j)) != string::npos)
+								{
+									renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(j)), replaceOriginals.at(j).length(), replaceNews.at(j));
+									rename(files.at(i).c_str(), renamed.at(i).c_str());
+									files = renamed;
+								}
 							}
 						}
 						else
 						{
-							if (renamed.at(i).find(replaceOriginal) != string::npos)
-							{
-								renamed.at(i).replace(renamed.at(i).find(replaceOriginal), replaceOriginal.length(), replaceNew);
-								rename(files.at(i).c_str(), renamed.at(i).c_str());	
-								files = renamed;
+							for (unsigned int j = 0; j < replaceOriginals.size(); j++)
+							{					
+								if (renamed.at(i).find(replaceOriginals.at(j)) != string::npos)
+								{
+									renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(j)), replaceOriginals.at(j).length(), replaceNews.at(j));
+									rename(files.at(i).c_str(), renamed.at(i).c_str());	
+									files = renamed;
+								}
 							}
 						}
 					}
@@ -183,20 +189,26 @@ void main(int argc, char *argv[])
 				{
 					if (repeatAction)
 					{
-						while (renamed.at(i).find(replaceOriginal) != string::npos)
+						for (unsigned int j = 0; j < replaceOriginals.size(); j++)
 						{
-							renamed.at(i).replace(renamed.at(i).find(replaceOriginal), replaceOriginal.length(), replaceNew);
-							rename(files.at(i).c_str(), renamed.at(i).c_str());
-							files = renamed;
+							while (renamed.at(i).find(replaceOriginals.at(j)) != string::npos)
+							{
+								renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(j)), replaceOriginals.at(j).length(), replaceNews.at(j));
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+								files = renamed;
+							}
 						}
 					}
 					else
 					{
-						if (renamed.at(i).find(replaceOriginal) != string::npos)
+						for (unsigned int j = 0; j < replaceOriginals.size(); j++)
 						{
-							renamed.at(i).replace(renamed.at(i).find(replaceOriginal), replaceOriginal.length(), replaceNew);
-							rename(files.at(i).c_str(), renamed.at(i).c_str());
-							files = renamed;
+							if (renamed.at(i).find(replaceOriginals.at(j)) != string::npos)
+							{
+								renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(j)), replaceOriginals.at(j).length(), replaceNews.at(j));
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+								files = renamed;
+							}
 						}
 					}
 				}
@@ -1072,9 +1084,9 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else if (!nextIsParamOrBlank(pos+1,argc,argv))
-			replaceNew = argv[pos+2];
+			replaceNews.push_back(argv[pos+2]);
 
-		replaceOriginal = argv[pos+1];
+		replaceOriginals.push_back(argv[pos+1]);
 		hasParam = true;
 		break;
 	case 'p':
