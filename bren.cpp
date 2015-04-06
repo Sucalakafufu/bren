@@ -8,12 +8,12 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.8.2.1";
+const static string VERSIONNUM = "1.8.2.2";
 
 //global vars
 string dir, extension, prefix, suffix, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
-	addExtension, startDelete, endDelete, advancedFile, advancedNewFile, oldDIR, newDIR, whitespaceOption;
-bool repeatAction, hasParam, insertI, capitalize, ALLCAPS, allLower;
+	addExtension, startDelete, endDelete, advancedFile, advancedNewFile, oldDIR, newDIR, whitespaceOption, needsSubString;
+bool repeatAction, hasParam, insertI, capitalize, ALLCAPS, allLower, includeThis;
 vector<string> excludeThese;
 vector<string> removeThese;
 vector<string> replaceOriginals;
@@ -26,9 +26,12 @@ bool nextIsParamOrBlank(int, int, char *[]);
 bool stringEquals(string, string);
 bool isPosNum(string);
 void getFiles(vector<string>&, string);
-bool hasExcluded(vector<string>, string);
+bool hasInt(vector<int>,int);
+bool hasString(vector<string>, string);
+vector<int> includesString(vector<string>, string);
 string removeExtension(string);
 void removeExtensions(vector<string>&);
+vector<int> renameAtLocations;
 string findExtension(string);
 void findExtensions(vector<string>, vector<string>&);
 string removeWhitespace(string, string);
@@ -44,13 +47,14 @@ void main(int argc, char *argv[])
 	vector<string> files;
 	vector<string> renamed;
 	vector<string> oldFiles;
-	vector<string> newFiles;
+	vector<string> newFiles;	
 	string::size_type position;
 
 	//initialize vars
 	dir = getCurrentDir();
 
 	extension = "*";
+	needsSubString.clear();
 	whitespaceOption.clear();
 	prefix.clear();
 	suffix.clear();
@@ -73,6 +77,7 @@ void main(int argc, char *argv[])
 	capitalize = false;
 	ALLCAPS = false;
 	allLower = false;
+	includeThis = true;
 
 	//check all params entered and set vars
 	if (argc == 1)
@@ -89,10 +94,16 @@ void main(int argc, char *argv[])
 				if (hasParam)
 				{				
 					if (argv[count][1] == 'S' || argv[count][1] == 'i' || argv[count][1] == 'I' || argv[count][1] == 'n' || argv[count][1] == 'D'
-						|| argv[count][1] == 'a' || argv[count][1] == 'M' || argv[count][1] == 'w')
+						|| argv[count][1] == 'a' || argv[count][1] == 'M')
 					{
 						if (!nextIsParamOrBlank(count,argc,argv) &&!nextIsParamOrBlank(count+1,argc,argv))
-						count++;
+							count++;
+					}
+
+					if (argv[count][1] == 'w')
+					{
+						if (nextIsParamOrBlank(count,argc,argv))
+							count--;
 					}
 
 					if (argv[count][1] == 'r')
@@ -130,6 +141,7 @@ void main(int argc, char *argv[])
 	{
 		getFiles(files,dir);
 		findExtensions(files,extensions);
+		renameAtLocations = includesString(files, needsSubString);
 		renamed = files;
 	}
 	else
@@ -149,7 +161,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{
@@ -179,13 +197,20 @@ void main(int argc, char *argv[])
 						}
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (repeatAction)
 					{
@@ -212,6 +237,7 @@ void main(int argc, char *argv[])
 						}
 					}
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -225,7 +251,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{
@@ -255,13 +287,20 @@ void main(int argc, char *argv[])
 						}
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (repeatAction)
 					{
@@ -288,6 +327,7 @@ void main(int argc, char *argv[])
 						}
 					}
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -304,7 +344,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{					
@@ -316,13 +362,20 @@ void main(int argc, char *argv[])
 						files = renamed;
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (startDelete == endDelete)
 						renamed.at(i).erase(renamed.at(i).begin()+atoi(startDelete.c_str())-1);
@@ -331,6 +384,7 @@ void main(int argc, char *argv[])
 					rename(files.at(i).c_str(), renamed.at(i).c_str());
 					files = renamed;
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -346,7 +400,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{				
@@ -367,13 +427,20 @@ void main(int argc, char *argv[])
 						files = renamed;
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (!insertI)
 					{
@@ -391,6 +458,7 @@ void main(int argc, char *argv[])
 					}
 					files = renamed;
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -404,7 +472,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{
@@ -413,18 +487,26 @@ void main(int argc, char *argv[])
 						files = renamed;
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{	
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					renamed.at(i) = prefix + renamed.at(i);
 					rename(files.at(i).c_str(), renamed.at(i).c_str());
 					files = renamed;
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -439,7 +521,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{			
@@ -457,13 +545,20 @@ void main(int argc, char *argv[])
 						files = renamed;
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < files.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					count = 1;
 					while (count<renamed.at(i).length()&&*(renamed.at(i).end()-count)!='.')
@@ -478,6 +573,7 @@ void main(int argc, char *argv[])
 					rename(files.at(i).c_str(), renamed.at(i).c_str());
 					files = renamed;
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -491,7 +587,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{			
@@ -500,18 +602,26 @@ void main(int argc, char *argv[])
 						files = renamed;
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < files.size(); i++)
 			{	
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					renamed.at(i) = renamed.at(i) + addExtension;
 					rename(files.at(i).c_str(), renamed.at(i).c_str());
 					files = renamed;
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -528,7 +638,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{				
@@ -547,13 +663,20 @@ void main(int argc, char *argv[])
 							cout << "\nFound \"" + searchThis + "\" in " + renamed.at(i) + " at position: " << position;
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{	
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					position = renamed.at(i).find(searchThis);
 					if (atoi(searchNumber.c_str()) > 1)
@@ -569,6 +692,7 @@ void main(int argc, char *argv[])
 					else
 						cout << "\nFound \"" + searchThis + "\" in " + renamed.at(i) + " at position: " << position;
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -582,7 +706,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{
@@ -597,13 +727,20 @@ void main(int argc, char *argv[])
 						}					
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				} 
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
 					{
@@ -615,6 +752,7 @@ void main(int argc, char *argv[])
 						}
 					}
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -628,7 +766,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{
@@ -647,13 +791,20 @@ void main(int argc, char *argv[])
 						}					
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					bool found = false;
 					for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
@@ -669,6 +820,7 @@ void main(int argc, char *argv[])
 						}
 					}
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -682,7 +834,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{
@@ -697,13 +855,20 @@ void main(int argc, char *argv[])
 						}					
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
 					{
@@ -715,6 +880,7 @@ void main(int argc, char *argv[])
 						}
 					}
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -730,7 +896,13 @@ void main(int argc, char *argv[])
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					if (stringEquals(extension, extensions.at(i)))
 					{
@@ -739,18 +911,26 @@ void main(int argc, char *argv[])
 						files = renamed;
 					}
 				}
+				includeThis = true;
 			}
 		}
 		else
 		{
 			for (unsigned int i = 0; i < renamed.size(); i++)
 			{	
-				if (!hasExcluded(excludeThese, renamed.at(i)))
+				if (!needsSubString.empty())
+				{
+					if (!hasInt(renameAtLocations, i))
+						includeThis = false;
+				}
+
+				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 				{
 					renamed.at(i) = removeWhitespace(renamed.at(i), whitespaceOption);
 					rename(files.at(i).c_str(), renamed.at(i).c_str());
 					files = renamed;
 				}
+				includeThis = true;
 			}
 		}
 	}
@@ -840,15 +1020,39 @@ void getFiles(vector<string> &files, string fileDIR)
 	remove(brenFile.c_str());
 }
 
-bool hasExcluded(vector<string> excludeThese, string compare)
+bool hasInt(vector<int> searchVector, int hasThis)
 {
-	for (unsigned int i = 0; i < excludeThese.size(); i++)
+	for (unsigned int i = 0; i < searchVector.size(); i++)
 	{
-		if (stringEquals(excludeThese.at(i), compare))
+		if (searchVector.at(i) == hasThis)
 			return true;
 	}
 
 	return false;
+}
+
+bool hasString(vector<string> searchVector, string hasThis)
+{
+	for (unsigned int i = 0; i < searchVector.size(); i++)
+	{
+		if (stringEquals(searchVector.at(i), hasThis))
+			return true;
+	}
+
+	return false;
+}
+
+vector<int> includesString(vector<string> searchVector, string includesThis)
+{
+	vector<int> stringLocations;
+
+	for (unsigned int i = 0; i < searchVector.size(); i++)
+	{
+		if (searchVector.at(i).find(includesThis) != string::npos)
+			stringLocations.push_back(i);
+	}
+
+	return stringLocations;
 }
 
 string removeExtension(string file)
@@ -1041,6 +1245,15 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		else
 		{
 			singleFileEdit = argv[pos+1];
+			hasParam = true;
+		}
+		break;
+	case 'H':
+		if (nextIsParamOrBlank(pos,argc,argv))
+			break;
+		else
+		{
+			needsSubString = argv[pos+1];
 			hasParam = true;
 		}
 		break;
@@ -1257,6 +1470,7 @@ void help()
 		<< " /E <filename(s)>\t\tExclude file(s) from renaming\n\n"
 		<< " /f <extension>\t\t\tFile extension to rename (defaults to *)\n\n"
 		<< " /F <filename>\t\t\tRename only this file\n\n"
+		<< " /H <string>\t\t\tRename files that have string in filename\n\n"
 		<< " /i <value> <location>\t\tInsert at location\n\n"
 		<< " /I <value> <string>\t\tInsert at string location\n\n"
 		<< " /L\t\t\t\tAll lowercase\n\n"
