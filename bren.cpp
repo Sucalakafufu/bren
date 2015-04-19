@@ -11,19 +11,37 @@ using namespace std;
 const static string VERSIONNUM = "1.8.3";
 
 //global vars
-string dir, extension, prefix, suffix, insertHere, insertThis, singleFileEdit, searchThis, searchNumber,
-	addExtension, startDelete, endDelete, advancedFile, advancedNewFile, oldDIR, newDIR, whitespaceOption, needsSubString;
-bool repeatAction, hasParam, insertI, capitalize, ALLCAPS, allLower, includeThis;
+string dir, extension, singleFileEdit, addExtension, oldDIR, newDIR, needsSubString;
+bool repeatAction, hasParam, capitalize, ALLCAPS, allLower, includeThis;
+
+//iterators
+int advancedFileItr, insertingItr, prefixItr, replacingItr, removeTheseItr, removeSectionItr, searchItr, suffixItr, whitespaceItr;
+
+vector<string> vectorStringBuffer;
+vector<bool> insertIs;
+vector<string> advancedFiles;
+vector<string> advancedNewFiles;
 vector<string> excludeThese;
-vector<string> removeThese;
-vector<string> replaceOriginals;
-vector<string> replaceNews;
+vector<string> params;
+vector<string> startDeletes;
+vector<string> endDeletes;
+vector<string> insertHeres;
+vector<string> insertThese;
+vector<string> prefixes;
+vector<string> suffixes;
+vector<string> searchThese;
+vector<string> searchNumbers;
+vector<string> whitespaceOptions;
+vector<vector<string>> removeThese;
+vector<vector<string>> replaceOriginals;
+vector<vector<string>> replaceNews;
 
 //functions
 char checkParam(int, char *);
 void storeParam(int, char, int, char*[]);
 bool nextIsParamOrBlank(int, int, char *[]);
 bool stringEquals(string, string);
+bool stringCaseEquals(string, string);
 bool isPosNum(string);
 void getFiles(vector<string>&, string);
 bool hasInt(vector<int>,int);
@@ -35,6 +53,7 @@ vector<int> renameAtLocations;
 string findExtension(string);
 void findExtensions(vector<string>, vector<string>&);
 string removeWhitespace(string, string);
+void resetItrs();
 void showVersion();
 void help();
 void badSyntax();
@@ -55,29 +74,18 @@ void main(int argc, char *argv[])
 
 	extension = "*";
 	needsSubString.clear();
-	whitespaceOption.clear();
-	prefix.clear();
-	suffix.clear();
 	removeThese.clear();
-	insertHere.clear();
-	insertThis.clear();
 	singleFileEdit.clear();
-	searchThis.clear();
 	addExtension.clear();
-	startDelete.clear();
-	endDelete.clear();
-	advancedFile.clear();
-	advancedNewFile.clear();
 	oldDIR.clear();
 	newDIR.clear();
-	searchNumber = "1";
 	repeatAction = false;
 	hasParam = true;
-	insertI = false;
 	capitalize = false;
 	ALLCAPS = false;
 	allLower = false;
 	includeThis = true;
+	resetItrs();
 
 	//check all params entered and set vars
 	if (argc == 1)
@@ -91,7 +99,7 @@ void main(int argc, char *argv[])
 			if (argv[count][0] == '/')
 			{
 				storeParam(count, checkParam(count, argv[count]), argc, argv);
-				if (hasParam)
+				if (!params.empty())
 				{				
 					if (argv[count][1] == 'S' || argv[count][1] == 'i' || argv[count][1] == 'I' || argv[count][1] == 'n' || argv[count][1] == 'D'
 						|| argv[count][1] == 'a' || argv[count][1] == 'M')
@@ -108,7 +116,7 @@ void main(int argc, char *argv[])
 
 					if (argv[count][1] == 'r')
 					{
-						for (unsigned int i = 1; i < removeThese.size(); i++)
+						for (unsigned int i = 1; i < removeThese.at(removeTheseItr-1).size(); i++)
 						{
 							count++;
 						}
@@ -120,6 +128,11 @@ void main(int argc, char *argv[])
 						{
 							count++;
 						}
+					}
+
+					if (argv[count][1] == 'c' || argv[count][1] == 'C' || argv[count][1] == 'L')
+					{
+						count--;
 					}
 
 					count++;
@@ -151,852 +164,907 @@ void main(int argc, char *argv[])
 		renamed = files;
 	}	
 
-#pragma region replacing
-	//replacing
-	if ((!replaceOriginals.empty() && replaceNews.empty()) || (replaceOriginals.empty() && !replaceNews.empty()))
-		badSyntax();
-	else if (!replaceOriginals.empty() && !replaceNews.empty())
+	resetItrs();
+
+	for (unsigned int paramItr = 0; paramItr < params.size(); paramItr++)
 	{
-		if (extension != "*")
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
 
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+	#pragma region replacing
+		//replacing
+		if (stringCaseEquals(params.at(paramItr), "n"))
+		{		
+			if ((!replaceOriginals.at(replacingItr).empty() && replaceNews.at(replacingItr).empty()) || (replaceOriginals.at(replacingItr).empty() && !replaceNews.at(replacingItr).empty()))
+				badSyntax();
+			else if (!replaceOriginals.at(replacingItr).empty() && !replaceNews.at(replacingItr).empty())
+			{
+				if (extension != "*")
 				{
-					if (stringEquals(extension, extensions.at(i)))
+					for (unsigned int i = 0; i < renamed.size(); i++)
 					{
-						if (repeatAction)
+						if (!needsSubString.empty())
 						{
-							for (unsigned int j = 0; j < replaceOriginals.size(); j++)
-							{						
-								while (renamed.at(i).find(replaceOriginals.at(j)) != string::npos)
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (stringEquals(extension, extensions.at(i)))
+							{
+								if (repeatAction)
 								{
-									renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(j)), replaceOriginals.at(j).length(), replaceNews.at(j));
-									rename(files.at(i).c_str(), renamed.at(i).c_str());
-									files = renamed;
+									for (unsigned int j = 0; j < replaceOriginals.at(replacingItr).size(); j++)
+									{						
+										while (renamed.at(i).find(replaceOriginals.at(replacingItr).at(j)) != string::npos)
+										{
+											renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(replacingItr).at(j)), replaceOriginals.at(replacingItr).at(j).length(), replaceNews.at(replacingItr).at(j));
+											rename(files.at(i).c_str(), renamed.at(i).c_str());
+											files = renamed;
+										}
+									}
+								}
+								else
+								{
+									for (unsigned int j = 0; j < replaceOriginals.at(replacingItr).size(); j++)
+									{					
+										if (renamed.at(i).find(replaceOriginals.at(replacingItr).at(j)) != string::npos)
+										{
+											renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(replacingItr).at(j)), replaceOriginals.at(replacingItr).at(j).length(), replaceNews.at(replacingItr).at(j));
+											rename(files.at(i).c_str(), renamed.at(i).c_str());	
+											files = renamed;
+										}
+									}
 								}
 							}
 						}
-						else
+						includeThis = true;
+					}
+				}
+				else
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
 						{
-							for (unsigned int j = 0; j < replaceOriginals.size(); j++)
-							{					
-								if (renamed.at(i).find(replaceOriginals.at(j)) != string::npos)
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (repeatAction)
+							{
+								for (unsigned int j = 0; j < replaceOriginals.at(replacingItr).size(); j++)
 								{
-									renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(j)), replaceOriginals.at(j).length(), replaceNews.at(j));
-									rename(files.at(i).c_str(), renamed.at(i).c_str());	
-									files = renamed;
+									while (renamed.at(i).find(replaceOriginals.at(replacingItr).at(j)) != string::npos)
+									{
+										renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(replacingItr).at(j)), replaceOriginals.at(replacingItr).at(j).length(), replaceNews.at(replacingItr).at(j));
+										rename(files.at(i).c_str(), renamed.at(i).c_str());
+										files = renamed;
+									}
+								}
+							}
+							else
+							{
+								for (unsigned int j = 0; j < replaceOriginals.at(replacingItr).size(); j++)
+								{
+									if (renamed.at(i).find(replaceOriginals.at(replacingItr).at(j)) != string::npos)
+									{
+										renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(replacingItr).at(j)), replaceOriginals.at(replacingItr).at(j).length(), replaceNews.at(replacingItr).at(j));
+										rename(files.at(i).c_str(), renamed.at(i).c_str());
+										files = renamed;
+									}
 								}
 							}
 						}
+						includeThis = true;
 					}
 				}
-				includeThis = true;
 			}
+			replacingItr++;
 		}
-		else
+	#pragma endregion
+
+	#pragma region removing
+		//removing
+		else if (stringCaseEquals(params.at(paramItr), "r"))
 		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
+			if (!removeThese.at(removeTheseItr).empty())
 			{
-				if (!needsSubString.empty())
+				if (extension != "*")
 				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (repeatAction)
+					for (unsigned int i = 0; i < renamed.size(); i++)
 					{
-						for (unsigned int j = 0; j < replaceOriginals.size(); j++)
+						if (!needsSubString.empty())
 						{
-							while (renamed.at(i).find(replaceOriginals.at(j)) != string::npos)
-							{
-								renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(j)), replaceOriginals.at(j).length(), replaceNews.at(j));
-								rename(files.at(i).c_str(), renamed.at(i).c_str());
-								files = renamed;
-							}
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
 						}
-					}
-					else
-					{
-						for (unsigned int j = 0; j < replaceOriginals.size(); j++)
-						{
-							if (renamed.at(i).find(replaceOriginals.at(j)) != string::npos)
-							{
-								renamed.at(i).replace(renamed.at(i).find(replaceOriginals.at(j)), replaceOriginals.at(j).length(), replaceNews.at(j));
-								rename(files.at(i).c_str(), renamed.at(i).c_str());
-								files = renamed;
-							}
-						}
-					}
-				}
-				includeThis = true;
-			}
-		}
-	}
-#pragma endregion
 
-#pragma region removing
-	//removing
-	if (!removeThese.empty())
-	{
-		if (extension != "*")
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
-					{
-						if (repeatAction)
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 						{
-							for (unsigned int j = 0; j < removeThese.size(); j++)
+							if (stringEquals(extension, extensions.at(i)))
 							{
-								while (renamed.at(i).find(removeThese.at(j)) != string::npos)
+								if (repeatAction)
 								{
-									renamed.at(i).replace(renamed.at(i).find(removeThese.at(j)), removeThese.at(j).length(), "");
-									rename(files.at(i).c_str(), renamed.at(i).c_str());
-									files = renamed;
+									for (unsigned int j = 0; j < removeThese.at(removeTheseItr).size(); j++)
+									{
+										while (renamed.at(i).find(removeThese.at(removeTheseItr).at(j)) != string::npos)
+										{
+											renamed.at(i).replace(renamed.at(i).find(removeThese.at(removeTheseItr).at(j)), removeThese.at(removeTheseItr).at(j).length(), "");
+											rename(files.at(i).c_str(), renamed.at(i).c_str());
+											files = renamed;
+										}
+									}
+								}
+								else
+								{
+									for (unsigned int j = 0; j < removeThese.at(removeTheseItr).size(); j++)
+									{
+										if (renamed.at(i).find(removeThese.at(removeTheseItr).at(j)) != string::npos)
+										{
+											renamed.at(i).replace(renamed.at(i).find(removeThese.at(removeTheseItr).at(j)), removeThese.at(removeTheseItr).at(j).length(), "");
+											rename(files.at(i).c_str(), renamed.at(i).c_str());
+											files = renamed;
+										}
+									}
 								}
 							}
 						}
-						else
+						includeThis = true;
+					}
+				}
+				else
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
 						{
-							for (unsigned int j = 0; j < removeThese.size(); j++)
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (repeatAction)
 							{
-								if (renamed.at(i).find(removeThese.at(j)) != string::npos)
+								for (unsigned int j = 0; j < removeThese.at(removeTheseItr).size(); j++)
 								{
-									renamed.at(i).replace(renamed.at(i).find(removeThese.at(j)), removeThese.at(j).length(), "");
-									rename(files.at(i).c_str(), renamed.at(i).c_str());
-									files = renamed;
+									while (renamed.at(i).find(removeThese.at(removeTheseItr).at(j)) != string::npos)
+									{
+										renamed.at(i).replace(renamed.at(i).find(removeThese.at(removeTheseItr).at(j)), removeThese.at(removeTheseItr).at(j).length(), "");
+										rename(files.at(i).c_str(), renamed.at(i).c_str());
+										files = renamed;
+									}
+								}
+							}
+							else
+							{
+								for (unsigned int j = 0; j < removeThese.at(removeTheseItr).size(); j++)
+								{
+									if (renamed.at(i).find(removeThese.at(removeTheseItr).at(j)) != string::npos)
+									{
+										renamed.at(i).replace(renamed.at(i).find(removeThese.at(removeTheseItr).at(j)), removeThese.at(removeTheseItr).at(j).length(), "");
+										rename(files.at(i).c_str(), renamed.at(i).c_str());
+										files = renamed;
+									}
 								}
 							}
 						}
+						includeThis = true;
 					}
 				}
-				includeThis = true;
 			}
+			removeTheseItr++;
 		}
-		else
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
+	#pragma endregion
 
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (repeatAction)
-					{
-						for (unsigned int j = 0; j < removeThese.size(); j++)
-						{
-							while (renamed.at(i).find(removeThese.at(j)) != string::npos)
-							{
-								renamed.at(i).replace(renamed.at(i).find(removeThese.at(j)), removeThese.at(j).length(), "");
-								rename(files.at(i).c_str(), renamed.at(i).c_str());
-								files = renamed;
-							}
-						}
-					}
-					else
-					{
-						for (unsigned int j = 0; j < removeThese.size(); j++)
-						{
-							if (renamed.at(i).find(removeThese.at(j)) != string::npos)
-							{
-								renamed.at(i).replace(renamed.at(i).find(removeThese.at(j)), removeThese.at(j).length(), "");
-								rename(files.at(i).c_str(), renamed.at(i).c_str());
-								files = renamed;
-							}
-						}
-					}
-				}
-				includeThis = true;
-			}
-		}
-	}
-#pragma endregion
-
-#pragma region removing section
-	//removing section
+	#pragma region removing section
+		//removing section
 		
-	if ((!startDelete.empty() && endDelete.empty()) || (startDelete.empty() && !endDelete.empty()))
-		badSyntax();
-	else if (!startDelete.empty() && !endDelete.empty())
-	{
-		if (extension != "*")
+		else if (stringCaseEquals(params.at(paramItr), "D"))
 		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
+			if ((!startDeletes.at(removeSectionItr).empty() && endDeletes.at(removeSectionItr).empty()) || (startDeletes.at(removeSectionItr).empty() && !endDeletes.at(removeSectionItr).empty()))
+				badSyntax();
+			else if (!startDeletes.at(removeSectionItr).empty() && !endDeletes.at(removeSectionItr).empty())
 			{
-				if (!needsSubString.empty())
+				if (extension != "*")
 				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
-					{					
-						if (startDelete == endDelete)
-							renamed.at(i).erase(renamed.at(i).begin()+atoi(startDelete.c_str())-1);
-						else
-							renamed.at(i).erase(renamed.at(i).begin()+atoi(startDelete.c_str())-1,renamed.at(i).begin()+atoi(endDelete.c_str()));
-						rename(files.at(i).c_str(), renamed.at(i).c_str());	
-						files = renamed;
-					}
-				}
-				includeThis = true;
-			}
-		}
-		else
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (startDelete == endDelete)
-						renamed.at(i).erase(renamed.at(i).begin()+atoi(startDelete.c_str())-1);
-					else
-						renamed.at(i).erase(renamed.at(i).begin()+atoi(startDelete.c_str())-1,renamed.at(i).begin()+atoi(endDelete.c_str()));
-					rename(files.at(i).c_str(), renamed.at(i).c_str());
-					files = renamed;
-				}
-				includeThis = true;
-			}
-		}
-	}
-#pragma endregion
-
-#pragma region inserting
-	//inserting
-	if ((!insertHere.empty() && insertThis.empty()) || (insertHere.empty() && !insertThis.empty()))
-		badSyntax();
-	else if (!insertHere.empty() && !insertThis.empty())
-	{
-		if (extension != "*")
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
-					{				
-						if (!insertI)
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
 						{
-							renamed.at(i).insert(renamed.at(i).begin()+atoi(insertHere.c_str())-1,insertThis.begin(),insertThis.end());
-							rename(files.at(i).c_str(), renamed.at(i).c_str());
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
 						}
-						else
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 						{
-							position = renamed.at(i).find(insertHere);
-							if (position != string::npos)
-							{
-								renamed.at(i).insert(renamed.at(i).begin()+position,insertThis.begin(),insertThis.end());
-								rename(files.at(i).c_str(), renamed.at(i).c_str());
-							}
-						}					
-						files = renamed;
-					}
-				}
-				includeThis = true;
-			}
-		}
-		else
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (!insertI)
-					{
-						renamed.at(i).insert(renamed.at(i).begin()+atoi(insertHere.c_str())-1,insertThis.begin(),insertThis.end());
-						rename(files.at(i).c_str(), renamed.at(i).c_str());
-					}
-					else
-					{
-						position = renamed.at(i).find(insertHere);
-						if (position != string::npos)
-						{
-							renamed.at(i).insert(renamed.at(i).begin()+position,insertThis.begin(),insertThis.end());
-							rename(files.at(i).c_str(), renamed.at(i).c_str());
-						}
-					}
-					files = renamed;
-				}
-				includeThis = true;
-			}
-		}
-	}
-#pragma endregion
-
-#pragma region prefix
-	//prefix
-	if (!prefix.empty())
-	{
-		if (extension != "*")
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
-					{
-						renamed.at(i) = prefix + renamed.at(i);
-						rename(files.at(i).c_str(), renamed.at(i).c_str());	
-						files = renamed;
-					}
-				}
-				includeThis = true;
-			}
-		}
-		else
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{	
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					renamed.at(i) = prefix + renamed.at(i);
-					rename(files.at(i).c_str(), renamed.at(i).c_str());
-					files = renamed;
-				}
-				includeThis = true;
-			}
-		}
-	}
-#pragma endregion
-
-#pragma region suffix
-	//suffix
-	if (!suffix.empty())
-	{
-		unsigned int count;
-		if (extension != "*")
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
-					{			
-						count = 1;
-						while (count<renamed.at(i).length()&&*(renamed.at(i).end()-count)!='.')
-							count++;
-
-						if (count == renamed.at(i).length())
-							renamed.at(i) = renamed.at(i) + suffix;
-						else
-						{
-							renamed.at(i).insert(renamed.at(i).end()-count,suffix.begin(),suffix.end());
-						}
-						rename(files.at(i).c_str(), renamed.at(i).c_str());
-						files = renamed;
-					}
-				}
-				includeThis = true;
-			}
-		}
-		else
-		{
-			for (unsigned int i = 0; i < files.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					count = 1;
-					while (count<renamed.at(i).length()&&*(renamed.at(i).end()-count)!='.')
-						count++;
-
-					if (count == renamed.at(i).length())
-						renamed.at(i) = renamed.at(i) + suffix;
-					else
-					{
-						renamed.at(i).insert(renamed.at(i).end()-count,suffix.begin(),suffix.end());
-					}
-					rename(files.at(i).c_str(), renamed.at(i).c_str());
-					files = renamed;
-				}
-				includeThis = true;
-			}
-		}
-	}
-#pragma endregion
-
-#pragma region add extension
-	//add extension
-	if (!addExtension.empty())
-	{
-		if (extension != "*")
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
-					{			
-						renamed.at(i) = renamed.at(i) + addExtension;
-						rename(files.at(i).c_str(), renamed.at(i).c_str());
-						files = renamed;
-					}
-				}
-				includeThis = true;
-			}
-		}
-		else
-		{
-			for (unsigned int i = 0; i < files.size(); i++)
-			{	
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					renamed.at(i) = renamed.at(i) + addExtension;
-					rename(files.at(i).c_str(), renamed.at(i).c_str());
-					files = renamed;
-				}
-				includeThis = true;
-			}
-		}
-	}
-
-#pragma endregion
-
-#pragma region search
-	//search
-	if (!searchThis.empty())
-	{
-		if (repeatAction)
-			badSyntax();
-		else if (extension != "*")
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
-					{				
-						position = renamed.at(i).find(searchThis);
-						if (atoi(searchNumber.c_str()) > 1)
-						{
-							for (int j = 1; j < atoi(searchNumber.c_str()); j++)
-								position = renamed.at(i).find(searchThis, position+1);
-						}
-						if (position != string::npos)
-							position++;
-
-						if (position == string::npos)
-							cout << "\nDid not find \"" + searchThis + "\" in " + renamed.at(i);
-						else
-							cout << "\nFound \"" + searchThis + "\" in " + renamed.at(i) + " at position: " << position;
-					}
-				}
-				includeThis = true;
-			}
-		}
-		else
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{	
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					position = renamed.at(i).find(searchThis);
-					if (atoi(searchNumber.c_str()) > 1)
-					{
-						for (int j = 1; j < atoi(searchNumber.c_str()); j++)
-							position = renamed.at(i).find(searchThis, position+1);
-					}
-					if (position != string::npos)
-						position++;
-
-					if (position == string::npos)
-						cout << "\nDid not find \"" + searchThis + "\" in " + renamed.at(i);
-					else
-						cout << "\nFound \"" + searchThis + "\" in " + renamed.at(i) + " at position: " << position;
-				}
-				includeThis = true;
-			}
-		}
-	}
-#pragma endregion
-
-#pragma region all lower
-	//all lower
-	if (allLower)
-	{
-		if (extension != "*")
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
-					{
-						for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
-						{
-							if (isalpha(renamed[i][j]))
-							{
-								renamed[i][j] = tolower(renamed[i][j]);
-								rename(files.at(i).c_str(), renamed.at(i).c_str());
+							if (stringEquals(extension, extensions.at(i)))
+							{					
+								if (startDeletes.at(removeSectionItr) == endDeletes.at(removeSectionItr))
+									renamed.at(i).erase(renamed.at(i).begin()+atoi(startDeletes.at(removeSectionItr).c_str())-1);
+								else
+									renamed.at(i).erase(renamed.at(i).begin()+atoi(startDeletes.at(removeSectionItr).c_str())-1,renamed.at(i).begin()+atoi(endDeletes.at(removeSectionItr).c_str()));
+								rename(files.at(i).c_str(), renamed.at(i).c_str());	
 								files = renamed;
 							}
-						}					
-					}
-				}
-				includeThis = true;
-			}
-		}
-		else
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				} 
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
-					{
-						if (isalpha(renamed[i][j]))
-						{
-							renamed[i][j] = tolower(renamed[i][j]);
-							rename(files.at(i).c_str(), renamed.at(i).c_str());
-							files = renamed;						
 						}
+						includeThis = true;
 					}
 				}
-				includeThis = true;
-			}
-		}
-	}
-#pragma endregion 
-
-#pragma region capitalize
-	//capitalize
-	if (capitalize)
-	{
-		if (extension != "*")
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
+				else
 				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
+					for (unsigned int i = 0; i < renamed.size(); i++)
 					{
-						bool found = false;
-						for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
+						if (!needsSubString.empty())
 						{
-							if (found && !isalpha(renamed[i][j]))
-								found = false;
-							else if (!found && isalpha(renamed[i][j]))
-							{
-								renamed[i][j] = toupper(renamed[i][j]);
-								rename(files.at(i).c_str(), renamed.at(i).c_str());
-								files = renamed;
-								found = true;
-							}
-						}					
-					}
-				}
-				includeThis = true;
-			}
-		}
-		else
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
 
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					bool found = false;
-					for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
-					{
-						if (found && !isalpha(renamed[i][j]))
-							found = false;
-						else if (!found && isalpha(renamed[i][j]))
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
 						{
-							renamed[i][j] = toupper(renamed[i][j]);
+							if (startDeletes.at(removeSectionItr) == endDeletes.at(removeSectionItr))
+								renamed.at(i).erase(renamed.at(i).begin()+atoi(startDeletes.at(removeSectionItr).c_str())-1);
+							else
+								renamed.at(i).erase(renamed.at(i).begin()+atoi(startDeletes.at(removeSectionItr).c_str())-1,renamed.at(i).begin()+atoi(endDeletes.at(removeSectionItr).c_str()));
 							rename(files.at(i).c_str(), renamed.at(i).c_str());
 							files = renamed;
-							found = true;
 						}
+						includeThis = true;
 					}
 				}
-				includeThis = true;
 			}
+			removeSectionItr++;
 		}
-	}
-#pragma endregion
+	#pragma endregion
 
-#pragma region ALLCAPS
-	//ALLCAPS
-	if (ALLCAPS)
-	{
-		if (extension != "*")
+	#pragma region inserting
+		//inserting
+		else if (stringEquals(params.at(paramItr), "i"))
 		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
+			if ((!insertHeres.at(insertingItr).empty() && insertThese.at(insertingItr).empty()) || (insertHeres.at(insertingItr).empty() && !insertThese.at(insertingItr).empty()))
+				badSyntax();
+			else if (!insertHeres.at(insertingItr).empty() && !insertThese.at(insertingItr).empty())
 			{
-				if (!needsSubString.empty())
+				if (extension != "*")
 				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
+					for (unsigned int i = 0; i < renamed.size(); i++)
 					{
-						for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
+						if (!needsSubString.empty())
 						{
-							if (isalpha(renamed[i][j]))
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (stringEquals(extension, extensions.at(i)))
+							{				
+								if (!insertIs.at(insertingItr))
+								{
+									renamed.at(i).insert(renamed.at(i).begin()+atoi(insertHeres.at(insertingItr).c_str())-1,insertThese.at(insertingItr).begin(),insertThese.at(insertingItr).end());
+									rename(files.at(i).c_str(), renamed.at(i).c_str());
+								}
+								else
+								{
+									position = renamed.at(i).find(insertHeres.at(insertingItr));
+									if (position != string::npos)
+									{
+										renamed.at(i).insert(renamed.at(i).begin()+position,insertThese.at(insertingItr).begin(),insertThese.at(insertingItr).end());
+										rename(files.at(i).c_str(), renamed.at(i).c_str());
+									}
+								}					
+								files = renamed;
+							}
+						}
+						includeThis = true;
+					}
+				}
+				else
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (!insertIs.at(insertingItr))
 							{
-								renamed[i][j] = toupper(renamed[i][j]);
+								renamed.at(i).insert(renamed.at(i).begin()+atoi(insertHeres.at(insertingItr).c_str())-1,insertThese.at(insertingItr).begin(),insertThese.at(insertingItr).end());
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+							}
+							else
+							{
+								position = renamed.at(i).find(insertHeres.at(insertingItr));
+								if (position != string::npos)
+								{
+									renamed.at(i).insert(renamed.at(i).begin()+position,insertThese.at(insertingItr).begin(),insertThese.at(insertingItr).end());
+									rename(files.at(i).c_str(), renamed.at(i).c_str());
+								}
+							}
+							files = renamed;
+						}
+						includeThis = true;
+					}
+				}
+			}
+			insertingItr++;
+		}
+	#pragma endregion
+
+	#pragma region prefix
+		//prefix
+		else if (stringCaseEquals(params.at(paramItr), "p"))
+		{
+			if (!prefixes.at(prefixItr).empty())
+			{
+				if (extension != "*")
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (stringEquals(extension, extensions.at(i)))
+							{
+								renamed.at(i) = prefixes.at(prefixItr) + renamed.at(i);
+								rename(files.at(i).c_str(), renamed.at(i).c_str());	
+								files = renamed;
+							}
+						}
+						includeThis = true;
+					}
+				}
+				else
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{	
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							renamed.at(i) = prefixes.at(prefixItr) + renamed.at(i);
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
+							files = renamed;
+						}
+						includeThis = true;
+					}
+				}
+			}
+			prefixItr++;
+		}
+	#pragma endregion
+
+	#pragma region suffix
+		//suffix
+		else if (stringCaseEquals(params.at(paramItr), "s"))
+		{
+			if (!suffixes.at(suffixItr).empty())
+			{
+				unsigned int count;
+				if (extension != "*")
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (stringEquals(extension, extensions.at(i)))
+							{			
+								count = 1;
+								while (count<renamed.at(i).length()&&*(renamed.at(i).end()-count)!='.')
+									count++;
+
+								if (count == renamed.at(i).length())
+									renamed.at(i) = renamed.at(i) + suffixes.at(suffixItr);
+								else
+								{
+									renamed.at(i).insert(renamed.at(i).end()-count,suffixes.at(suffixItr).begin(),suffixes.at(suffixItr).end());
+								}
 								rename(files.at(i).c_str(), renamed.at(i).c_str());
 								files = renamed;
 							}
-						}					
-					}
-				}
-				includeThis = true;
-			}
-		}
-		else
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
-				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
-					{
-						if (isalpha(renamed[i][j]))
-						{
-							renamed[i][j] = toupper(renamed[i][j]);
-							rename(files.at(i).c_str(), renamed.at(i).c_str());
-							files = renamed;						
 						}
+						includeThis = true;
 					}
 				}
-				includeThis = true;
-			}
-		}
-	}
-#pragma endregion 
-
-#pragma region whitespace
-	//remove whitespace
-	if (!whitespaceOption.empty())
-	{
-		if (repeatAction)
-			badSyntax();
-		else if (extension != "*")
-		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{
-				if (!needsSubString.empty())
+				else
 				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
-				}
-
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
-				{
-					if (stringEquals(extension, extensions.at(i)))
+					for (unsigned int i = 0; i < files.size(); i++)
 					{
-						renamed.at(i) = removeWhitespace(renamed.at(i), whitespaceOption);
-						rename(files.at(i).c_str(), renamed.at(i).c_str());
-						files = renamed;
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							count = 1;
+							while (count<renamed.at(i).length()&&*(renamed.at(i).end()-count)!='.')
+								count++;
+
+							if (count == renamed.at(i).length())
+								renamed.at(i) = renamed.at(i) + suffixes.at(suffixItr);
+							else
+							{
+								renamed.at(i).insert(renamed.at(i).end()-count,suffixes.at(suffixItr).begin(),suffixes.at(suffixItr).end());
+							}
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
+							files = renamed;
+						}
+						includeThis = true;
 					}
 				}
-				includeThis = true;
+			}
+			suffixItr++;
+		}
+	#pragma endregion
+
+	#pragma region add extension
+		//add extension
+		else if (stringCaseEquals(params.at(paramItr), "e"))
+		{
+			if (!addExtension.empty())
+			{
+				if (extension != "*")
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (stringEquals(extension, extensions.at(i)))
+							{			
+								renamed.at(i) = renamed.at(i) + addExtension;
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+								files = renamed;
+							}
+						}
+						includeThis = true;
+					}
+				}
+				else
+				{
+					for (unsigned int i = 0; i < files.size(); i++)
+					{	
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							renamed.at(i) = renamed.at(i) + addExtension;
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
+							files = renamed;
+						}
+						includeThis = true;
+					}
+				}
 			}
 		}
-		else
+	#pragma endregion
+
+	#pragma region search
+		//search
+		else if (stringCaseEquals(params.at(paramItr), "S"))
 		{
-			for (unsigned int i = 0; i < renamed.size(); i++)
-			{	
-				if (!needsSubString.empty())
+			if (!searchThese.at(searchItr).empty())
+			{
+				if (repeatAction)
+					badSyntax();
+				else if (extension != "*")
 				{
-					if (!hasInt(renameAtLocations, i))
-						includeThis = false;
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (stringEquals(extension, extensions.at(i)))
+							{				
+								position = renamed.at(i).find(searchThese.at(searchItr));
+								if (atoi(searchNumbers.at(searchItr).c_str()) > 1)
+								{
+									for (int j = 1; j < atoi(searchNumbers.at(searchItr).c_str()); j++)
+										position = renamed.at(i).find(searchThese.at(searchItr), position+1);
+								}
+								if (position != string::npos)
+									position++;
+
+								if (position == string::npos)
+									cout << "\nDid not find \"" + searchThese.at(searchItr) + "\" in " + renamed.at(i);
+								else
+									cout << "\nFound \"" + searchThese.at(searchItr) + "\" in " + renamed.at(i) + " at position: " << position;
+							}
+						}
+						includeThis = true;
+					}
+				}
+				else
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{	
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							position = renamed.at(i).find(searchThese.at(searchItr));
+							if (atoi(searchNumbers.at(searchItr).c_str()) > 1)
+							{
+								for (int j = 1; j < atoi(searchNumbers.at(searchItr).c_str()); j++)
+									position = renamed.at(i).find(searchThese.at(searchItr), position+1);
+							}
+							if (position != string::npos)
+								position++;
+
+							if (position == string::npos)
+								cout << "\nDid not find \"" + searchThese.at(searchItr) + "\" in " + renamed.at(i);
+							else
+								cout << "\nFound \"" + searchThese.at(searchItr) + "\" in " + renamed.at(i) + " at position: " << position;
+						}
+						includeThis = true;
+					}
+				}
+			}
+			searchItr++;
+		}
+	#pragma endregion
+
+	#pragma region all lower
+		//all lower
+		else if (stringCaseEquals(params.at(paramItr), "L"))
+		{
+			if (allLower)
+			{
+				if (extension != "*")
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (stringEquals(extension, extensions.at(i)))
+							{
+								for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
+								{
+									if (isalpha(renamed[i][j]))
+									{
+										renamed[i][j] = tolower(renamed[i][j]);
+										rename(files.at(i).c_str(), renamed.at(i).c_str());
+										files = renamed;
+									}
+								}					
+							}
+						}
+						includeThis = true;
+					}
+				}
+				else
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						} 
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
+							{
+								if (isalpha(renamed[i][j]))
+								{
+									renamed[i][j] = tolower(renamed[i][j]);
+									rename(files.at(i).c_str(), renamed.at(i).c_str());
+									files = renamed;						
+								}
+							}
+						}
+						includeThis = true;
+					}
+				}
+			}
+		}
+	#pragma endregion 
+
+	#pragma region capitalize
+		//capitalize
+		else if (stringCaseEquals(params.at(paramItr), "c"))
+		{
+			if (capitalize)
+			{
+				if (extension != "*")
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (stringEquals(extension, extensions.at(i)))
+							{
+								bool found = false;
+								for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
+								{
+									if (found && !isalpha(renamed[i][j]))
+										found = false;
+									else if (!found && isalpha(renamed[i][j]))
+									{
+										renamed[i][j] = toupper(renamed[i][j]);
+										rename(files.at(i).c_str(), renamed.at(i).c_str());
+										files = renamed;
+										found = true;
+									}
+								}					
+							}
+						}
+						includeThis = true;
+					}
+				}
+				else
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							bool found = false;
+							for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
+							{
+								if (found && !isalpha(renamed[i][j]))
+									found = false;
+								else if (!found && isalpha(renamed[i][j]))
+								{
+									renamed[i][j] = toupper(renamed[i][j]);
+									rename(files.at(i).c_str(), renamed.at(i).c_str());
+									files = renamed;
+									found = true;
+								}
+							}
+						}
+						includeThis = true;
+					}
+				}
+			}
+		}
+	#pragma endregion
+
+	#pragma region ALLCAPS
+		//ALLCAPS
+		else if (stringCaseEquals(params.at(paramItr), "C"))
+		{
+			if (ALLCAPS)
+			{
+				if (extension != "*")
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (stringEquals(extension, extensions.at(i)))
+							{
+								for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
+								{
+									if (isalpha(renamed[i][j]))
+									{
+										renamed[i][j] = toupper(renamed[i][j]);
+										rename(files.at(i).c_str(), renamed.at(i).c_str());
+										files = renamed;
+									}
+								}					
+							}
+						}
+						includeThis = true;
+					}
+				}
+				else
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							for (unsigned int j = 0; j < renamed.at(i).size()-extensions.at(i).size(); j++)
+							{
+								if (isalpha(renamed[i][j]))
+								{
+									renamed[i][j] = toupper(renamed[i][j]);
+									rename(files.at(i).c_str(), renamed.at(i).c_str());
+									files = renamed;						
+								}
+							}
+						}
+						includeThis = true;
+					}
+				}
+			}
+		}
+	#pragma endregion 
+
+	#pragma region whitespace
+		//remove whitespace
+		else if (stringCaseEquals(params.at(paramItr), "w"))
+		{
+			if (!whitespaceOptions.at(whitespaceItr).empty())
+			{
+				if (repeatAction)
+					badSyntax();
+				else if (extension != "*")
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							if (stringEquals(extension, extensions.at(i)))
+							{
+								renamed.at(i) = removeWhitespace(renamed.at(i), whitespaceOptions.at(whitespaceItr));
+								rename(files.at(i).c_str(), renamed.at(i).c_str());
+								files = renamed;
+							}
+						}
+						includeThis = true;
+					}
+				}
+				else
+				{
+					for (unsigned int i = 0; i < renamed.size(); i++)
+					{	
+						if (!needsSubString.empty())
+						{
+							if (!hasInt(renameAtLocations, i))
+								includeThis = false;
+						}
+
+						if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+						{
+							renamed.at(i) = removeWhitespace(renamed.at(i), whitespaceOptions.at(whitespaceItr));
+							rename(files.at(i).c_str(), renamed.at(i).c_str());
+							files = renamed;
+						}
+						includeThis = true;
+					}
+				}
+			}
+			whitespaceItr++;
+		}
+	#pragma endregion
+
+	#pragma region advanced rename
+		//advanced rename
+		else if (stringCaseEquals(params.at(paramItr), "a"))
+		{
+			if (!advancedFiles.at(advancedFileItr).empty() && !advancedNewFiles.at(advancedFileItr).empty())
+			{
+				advancedNewFiles.at(advancedFileItr) = advancedNewFiles.at(advancedFileItr)+findExtension(advancedFiles.at(advancedFileItr));
+				rename(advancedFiles.at(advancedFileItr).c_str(), advancedNewFiles.at(advancedFileItr).c_str());
+				files = renamed;
+			}
+			advancedFileItr++;
+		}
+	#pragma endregion
+
+	#pragma region directory rename
+		//rename directory files to other directory file names
+		else if (stringCaseEquals(params.at(paramItr), "M"))
+		{
+			if (!oldDIR.empty() && !newDIR.empty())
+			{
+				getFiles(oldFiles, oldDIR); getFiles(newFiles, newDIR);
+				if (oldFiles.size() != newFiles.size())
+				{
+					cout << "\nCannot rename files unless both directories have an equal number of files.\n";
+					exit(0);
 				}
 
-				if (!hasString(excludeThese, renamed.at(i)) && includeThis)
+				cout << "\nFile names will be renamed as such:\n\n";
+				for (unsigned int i = 0; i < oldFiles.size(); i++)
 				{
-					renamed.at(i) = removeWhitespace(renamed.at(i), whitespaceOption);
-					rename(files.at(i).c_str(), renamed.at(i).c_str());
-					files = renamed;
+					cout << newFiles.at(i) + " -> " + removeExtension(oldFiles.at(i)) + findExtension(newFiles.at(i)) + "\n";
 				}
-				includeThis = true;
-			}
-		}
-	}
-#pragma endregion
+				cout << "\nContinue with operation? (Y\\N): ";
+				string verify; cin >> verify;
+				bool verifying = true;
 
-#pragma region advanced rename
-	//advanced rename
-	if (!advancedFile.empty() && !advancedNewFile.empty())
-	{
-		advancedNewFile = advancedNewFile+findExtension(advancedFile);
-		rename(advancedFile.c_str(), advancedNewFile.c_str());
-		files = renamed;
-	}
-		
-#pragma endregion
-
-#pragma region directory rename
-	//rename directory files to other directory file names
-	if (!oldDIR.empty() && !newDIR.empty())
-	{
-		getFiles(oldFiles, oldDIR); getFiles(newFiles, newDIR);
-		if (oldFiles.size() != newFiles.size())
-		{
-			cout << "\nCannot rename files unless both directories have an equal number of files.\n";
-			exit(0);
-		}
-
-		cout << "\nFile names will be renamed as such:\n\n";
-		for (unsigned int i = 0; i < oldFiles.size(); i++)
-		{
-			cout << newFiles.at(i) + " -> " + removeExtension(oldFiles.at(i)) + findExtension(newFiles.at(i)) + "\n";
-		}
-		cout << "\nContinue with operation? (Y\\N): ";
-		string verify; cin >> verify;
-		bool verifying = true;
-		
-		while (verifying)
-		{
-			if (verify == "Y" || verify == "y")
-			{
-				_chdir(newDIR.c_str());
-				for (unsigned int i=0; i<oldFiles.size(); i++)
+				while (verifying)
 				{
-					string buffer = removeExtension(oldFiles.at(i)) + findExtension(newFiles.at(i));
-					rename(newFiles.at(i).c_str(), buffer.c_str());
+					if (verify == "Y" || verify == "y")
+					{
+						_chdir(newDIR.c_str());
+						for (unsigned int i=0; i<oldFiles.size(); i++)
+						{
+							string buffer = removeExtension(oldFiles.at(i)) + findExtension(newFiles.at(i));
+							rename(newFiles.at(i).c_str(), buffer.c_str());
+						}
+						cout << "\nFiles have been successfully renamed\n";
+						verifying = false;
+					}
+					else if (verify == "N" || verify == "n")
+					{
+						cout << "\nDirectory renaming canceled\n";	
+						verifying = false;
+					}
+					else
+					{
+						cout << "\nPlease enter Y or N to verify if you want to continue with renaming: ";
+					}
 				}
-				cout << "\nFiles have been successfully renamed\n";
-				verifying = false;
-			}
-			else if (verify == "N" || verify == "n")
-			{
-				cout << "\nDirectory renaming canceled\n";	
-				verifying = false;
-			}
-			else
-			{
-				cout << "\nPlease enter Y or N to verify if you want to continue with renaming: ";
 			}
 		}
+	#pragma endregion
+
+	#pragma region series rename
+		//rename files based on a series
+	#pragma endregion
+
 	}
-
-#pragma endregion
-
-#pragma region series rename
-	//rename files based on a series
-#pragma endregion
 }
 
 void getFiles(vector<string> &files, string fileDIR)
@@ -1155,25 +1223,25 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		else
 		{
 			help();
-			hasParam = true;
+			params.push_back("h");
 		}
 		break;
 	case 'a':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else if (!nextIsParamOrBlank(pos+1,argc,argv))
-			advancedNewFile = argv[pos+2];
+			advancedNewFiles.push_back(argv[pos+2]);
 
-		advancedFile = argv[pos+1];
-		hasParam = true;
+		advancedFiles.push_back(argv[pos+1]);
+		params.push_back("a");
 		break;
 	case 'c':
 		capitalize = true;
-		hasParam = false;
+		params.push_back("c");
 		break;
 	case 'C':
 		ALLCAPS = true;
-		hasParam = false;
+		params.push_back("C");
 		break;
 	case 'd':
 		if (nextIsParamOrBlank(pos, argc, argv))
@@ -1183,7 +1251,7 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			dir = argv[pos+1];
 			while (dir.find("\\") != string::npos)
 				dir.replace(dir.find("\\"),1,"/");
-			hasParam = true;
+			params.push_back("d");
 		}
 		break;
 	case 'D':
@@ -1191,28 +1259,30 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			break;		
 		else if (!nextIsParamOrBlank(pos+1,argc,argv))
 		{
-			endDelete = argv[pos+2];
+			endDeletes.push_back(argv[pos+2]);
 
-			if (!isPosNum(endDelete))
+			if (!isPosNum(endDeletes.back()))
 				badSyntax();
 		}
 
-		startDelete = argv[pos+1];
-		if (!isPosNum(startDelete))
+		startDeletes.push_back(argv[pos+1]);
+		if (!isPosNum(startDeletes.back()))
 			badSyntax();		
 
-		if (atoi(endDelete.c_str()) < atoi(startDelete.c_str()))
+		if (atoi(endDeletes.back().c_str()) < atoi(startDeletes.back().c_str()))
 			badSyntax();
 
-		hasParam = true;
+		params.push_back("D");
 		break;
 	case 'e':
 		if (nextIsParamOrBlank(pos, argc, argv))
 			break;
+		else if (!addExtension.empty())
+			break;
 		else
 		{
 			addExtension = argv[pos+1];
-			hasParam = true;
+			params.push_back("e");
 		}
 		break;
 	case 'E':
@@ -1225,7 +1295,7 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			{
 				excludeThese.push_back(argv[pos+1+i]);
 				i++;
-				hasParam = true;
+				params.push_back("E");
 			}
 		}
 		break;
@@ -1236,7 +1306,7 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		{
 			extension = ".";
 			extension = extension + argv[pos+1];
-			hasParam = true;
+			params.push_back("f");
 		}
 		break;
 	case 'F':
@@ -1245,7 +1315,7 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		else
 		{
 			singleFileEdit = argv[pos+1];
-			hasParam = true;
+			params.push_back("F");
 		}
 		break;
 	case 'H':
@@ -1254,7 +1324,7 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		else
 		{
 			needsSubString = argv[pos+1];
-			hasParam = true;
+			params.push_back("H");
 		}
 		break;
 	case 'i':
@@ -1262,28 +1332,28 @@ void storeParam(int pos, char option, int argc, char *argv[])
 			break;
 		else if (!nextIsParamOrBlank(pos+1,argc,argv))
 		{
-			insertHere = argv[pos+2];
-			if (!isPosNum(insertHere))
+			insertHeres.push_back(argv[pos+2]);
+			if (!isPosNum(insertHeres.back()))
 				badSyntax();			
 		}
 
-		insertThis = argv[pos+1];
-		hasParam = true;
-		insertI = false;
+		insertThese.push_back(argv[pos+1]);
+		params.push_back("i");
+		insertIs.push_back("false");
 		break;
 	case 'I':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else if (!nextIsParamOrBlank(pos+1,argc,argv))
-			insertHere = argv[pos+2];
+			insertHeres.push_back(argv[pos+2]);
 
-		insertThis = argv[pos+1];
-		hasParam = true;
-		insertI = true;
+		insertThese.push_back(argv[pos+1]);
+		params.push_back("I");
+		insertIs.push_back("true");
 		break;
 	case 'L':
 		allLower = true;
-		hasParam = false;
+		params.push_back("L");
 		break;
 	case 'M':
 		if (nextIsParamOrBlank(pos,argc,argv))
@@ -1297,18 +1367,23 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else if (!nextIsParamOrBlank(pos+1,argc,argv))
-			replaceNews.push_back(argv[pos+2]);
+		{
+			replaceNews.push_back(vectorStringBuffer);
+			replaceNews.at(replacingItr).push_back(argv[pos+2]);
+		}
 
-		replaceOriginals.push_back(argv[pos+1]);
-		hasParam = true;
+		replaceOriginals.push_back(vectorStringBuffer);
+		replaceOriginals.at(replacingItr).push_back(argv[pos+1]);
+		params.push_back("n");
+		replacingItr++;
 		break;
 	case 'p':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else
 		{
-			prefix = argv[pos+1];
-			hasParam = true;
+			prefixes.push_back(argv[pos+1]);
+			params.push_back("p");
 		}
 		break;
 	case 'r':
@@ -1317,38 +1392,41 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		else
 		{
 			int i = 0;
+			removeThese.push_back(vectorStringBuffer);
 			while (!nextIsParamOrBlank(pos+i,argc,argv))
 			{
-				removeThese.push_back(argv[pos+1+i]);
-				i++;
-				hasParam = true;
+				removeThese.at(removeTheseItr).push_back(argv[pos+1+i]);
+				i++;				
 			}
+			params.push_back("r");
+			removeTheseItr++;
 		}
 		break;	
 	case 'R':
 		repeatAction = true;
-		hasParam = false;
+		params.push_back("R");
 		break;
 	case 's':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else
 		{
-			suffix = argv[pos+1];
-			hasParam = true;
+			suffixes.push_back(argv[pos+1]);
+			params.push_back("s");
 		}
 		break;
 	case 'S':
+		searchNumbers.push_back("1");
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
 		else if (!nextIsParamOrBlank(pos+1,argc,argv))
 		{
-			searchNumber = argv[pos+2];
-			if (!isPosNum(searchNumber))
+			searchNumbers.back() = argv[pos+2];
+			if (!isPosNum(searchNumbers.back()))
 				badSyntax();			
 		}
-		searchThis = argv[pos+1];
-		hasParam = true;
+		searchThese.push_back(argv[pos+1]);
+		params.push_back("S");
 		break;
 	case 'v':
 		if (argc > 2)
@@ -1356,19 +1434,19 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		else
 		{
 			showVersion();
-			hasParam = true;
+			params.push_back("v");
 		}
 		break;
 	case 'w':
 		if (!nextIsParamOrBlank(pos, argc, argv))
 		{
-			whitespaceOption = argv[pos+1];
-			if (whitespaceOption.length() > 1 || (whitespaceOption != "l" && whitespaceOption != "t"))
+			whitespaceOptions.push_back(argv[pos+1]);
+			if (whitespaceOptions.back().length() > 1 || (whitespaceOptions.back() != "l" && whitespaceOptions.back() != "t"))
 				badSyntax();			
 		}
 		else
-			whitespaceOption = "*";
-		hasParam = true;
+			whitespaceOptions.back() = "*";
+		params.push_back("w");
 		break;
 	default:
 		badSyntax();
@@ -1398,6 +1476,14 @@ bool nextIsParamOrBlank(int pos, int argc, char *argv[])
 	else if (nextIsParam(pos, argc, argv))
 		return true;
 	else
+		return false;
+}
+
+bool stringCaseEquals(string original, string compare)
+{
+	if (original == compare)
+		return true;
+	else 
 		return false;
 }
 
@@ -1433,6 +1519,19 @@ bool isPosNum(string check)
 		return false;
 
 	return true;
+}
+
+void resetItrs()
+{
+	advancedFileItr = 0;
+	insertingItr = 0;
+	prefixItr = 0;
+	removeSectionItr = 0;
+	removeTheseItr = 0;
+	replacingItr = 0;	
+	searchItr = 0;
+	suffixItr = 0;
+	whitespaceItr = 0;
 }
 
 string getCurrentDir() 
