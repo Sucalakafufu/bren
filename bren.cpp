@@ -104,38 +104,31 @@ void main(int argc, char *argv[])
 					if (argv[count][1] == 'S' || argv[count][1] == 'i' || argv[count][1] == 'I' || argv[count][1] == 'n' || argv[count][1] == 'D'
 						|| argv[count][1] == 'a' || argv[count][1] == 'M')
 					{
-						if (!nextIsParamOrBlank(count,argc,argv) &&!nextIsParamOrBlank(count+1,argc,argv))
+						if (!nextIsParamOrBlank(count,argc,argv))
+							count++;
+
+						if (!nextIsParamOrBlank(count,argc,argv))
 							count++;
 					}
-
-					if (argv[count][1] == 'w')
-					{
-						if (nextIsParamOrBlank(count,argc,argv))
-							count--;
+					else if (argv[count][1] == 'd' || argv[count][1] == 'e' || argv[count][1] == 'F' || argv[count][1] == 'f' || argv[count][1] == 'H'
+						|| argv[count][1] == 'p' || argv[count][1] == 's' || argv[count][1] == 'w') {
+						if (!nextIsParamOrBlank(count,argc,argv))
+							count++;
 					}
-
-					if (argv[count][1] == 'r')
+					else if (argv[count][1] == 'r')
 					{
-						for (unsigned int i = 1; i < removeThese.at(removeTheseItr-1).size(); i++)
+						for (unsigned int i = 0; i < removeThese.at(removeTheseItr-1).size(); i++)
 						{
 							count++;
 						}
 					}
-
-					if (argv[count][1] == 'E')
+					else if (argv[count][1] == 'E')
 					{
-						for (unsigned int i = 1; i < excludeThese.size(); i++)
+						for (unsigned int i = 0; i < excludeThese.size(); i++)
 						{
 							count++;
 						}
 					}
-
-					if (argv[count][1] == 'c' || argv[count][1] == 'C' || argv[count][1] == 'L')
-					{
-						count--;
-					}
-
-					count++;
 				}
 			}
 			else
@@ -1445,7 +1438,7 @@ void storeParam(int pos, char option, int argc, char *argv[])
 				badSyntax();			
 		}
 		else
-			whitespaceOptions.back() = "*";
+			whitespaceOptions.push_back("*");
 		params.push_back("w");
 		break;
 	default:
