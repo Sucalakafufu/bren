@@ -8,7 +8,7 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.8.3.1";
+const static string VERSIONNUM = "1.8.3.2";
 
 //global vars
 string dir, extension, singleFileEdit, addExtension, oldDIR, newDIR, needsSubString;
@@ -1116,6 +1116,15 @@ vector<int> includesString(vector<string> searchVector, string includesThis)
 	return stringLocations;
 }
 
+int stringLocation(string searchString, string findThis) {
+	size_t location = searchString.find(findThis);
+
+	if (location != string::npos)
+		return (int)location;
+
+	return -1;
+}
+
 string removeExtension(string file)
 {
 	string newFile=""; unsigned int i = 1;
@@ -1332,7 +1341,7 @@ void storeParam(int pos, char option, int argc, char *argv[])
 
 		insertThese.push_back(argv[pos+1]);
 		params.push_back("i");
-		insertIs.push_back("false");
+		insertIs.push_back(false);
 		break;
 	case 'I':
 		if (nextIsParamOrBlank(pos,argc,argv))
@@ -1342,7 +1351,7 @@ void storeParam(int pos, char option, int argc, char *argv[])
 
 		insertThese.push_back(argv[pos+1]);
 		params.push_back("I");
-		insertIs.push_back("true");
+		insertIs.push_back(true);
 		break;
 	case 'L':
 		allLower = true;
