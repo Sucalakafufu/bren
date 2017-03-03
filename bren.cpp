@@ -1364,6 +1364,8 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		{
 			oldDIR = argv[pos+1];
 			newDIR = argv[pos+2];
+			params.push_back("M");
+			break;
 		}
 	case 'n':
 		if (nextIsParamOrBlank(pos,argc,argv))
