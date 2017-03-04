@@ -12,7 +12,7 @@ const static string VERSIONNUM = "1.8.4.1";
 
 //global vars
 string dir, extension, singleFileEdit, addExtension, oldDIR, newDIR, needsSubString;
-bool repeatAction, hasParam, capitalize, ALLCAPS, allLower, includeThis;
+bool repeatAction, hasParam, capitalize, ALLCAPS, allLower, includeThis, renameInOrder;
 
 //iterators
 int advancedFileItr, insertingItr, prefixItr, replacingItr, removeTheseItr, removeSectionItr, searchItr, suffixItr, whitespaceItr;
@@ -85,6 +85,7 @@ void main(int argc, char *argv[])
 	ALLCAPS = false;
 	allLower = false;
 	includeThis = true;
+	renameInOrder = false;
 	resetItrs();
 
 	//check all params entered and set vars
@@ -1052,6 +1053,24 @@ void main(int argc, char *argv[])
 			}
 		}
 	#pragma endregion
+		//rename files in the order their in by number
+		else if (stringCaseEquals(params.at(paramItr), "o"))
+		{
+			if (renameInOrder)
+			{				
+				for (unsigned int i = 0; i < renamed.size(); i++) 
+				{
+					char buffer[100];
+					_itoa_s(i + 1, buffer, 10);
+					renamed.at(i) =  buffer + findExtension(files.at(i));					
+					rename(files.at(i).c_str(), renamed.at(i).c_str());
+					files = renamed;
+				}
+			}
+		}
+	#pragma region rename in order
+
+	#pragma endregion
 
 	#pragma region series rename
 		//rename files based on a series
@@ -1381,6 +1400,10 @@ void storeParam(int pos, char option, int argc, char *argv[])
 		params.push_back("n");
 		replacingItr++;
 		break;
+	case 'o':
+		renameInOrder = true;
+		params.push_back("o");
+		break;
 	case 'p':
 		if (nextIsParamOrBlank(pos,argc,argv))
 			break;
@@ -1579,6 +1602,7 @@ void help()
 		<< " /L\t\t\t\tAll lowercase\n\n"
 		<< " /M <old Dir> <new Dir>\t\tAttempts to rename new Dir files to the old Dir\n\t\t\t\tfile names in alpha order\n\n"
 		<< " /n <string> <value>\t\tReplace string with value\n\n"
+		<< " /o \t\t\t\tRename file names to numbers in alpha order\n\t\t\t\t(Attempts to keep current extensions)\n\n"
 		<< " /p <prefix>\t\t\tAdd prefix to file names\n\n"
 		<< " /r <string(s)>\t\t\tRemove string(s) from file names\n\n"
 		<< " /R\t\t\t\tRepeat action through whole file\n\n"
