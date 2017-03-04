@@ -8,7 +8,7 @@
 
 using namespace std;
 
-const static string VERSIONNUM = "1.8.4";
+const static string VERSIONNUM = "1.8.4.1";
 
 //global vars
 string dir, extension, singleFileEdit, addExtension, oldDIR, newDIR, needsSubString;
